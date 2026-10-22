@@ -13,10 +13,12 @@
   // ---------- tunables ----------
   const T = {
     PERFECT_PX: 4, GROW_AFTER: 3, GROW_PX: 5, DEPTH_X: 9, DEPTH_Y: 11,
-    BASE_SPEED: 0.42, SPEED_STEP: 0.022, SPEED_MAX: 2.6, // speed as fraction of view width per second
+    BASE_SPEED: 0.29, SPEED_STEP: 0.03, SPEED_MAX: 2.6, // fraction of view width/s: starts 30% slower, reaches the old start (0.42) at ~15 floors, caps at 0.75 (was 1.09)
     RAIN_EVERY: 15, RAIN_LEN: 5, MILESTONE: 20,
+    // WIDWAW event: Bill VanHorn pops into Cyrus's spot; boards come out 40% faster and score 2x for ~11 s
+    BILL_MIN: 25, BILL_MAX: 45, BILL_MIN_FLOORS: 10, BILL_DUR: 11, BILL_BOOST: 1.4, BILL_SCORE: 2, POOF: 0.35,
     PALLET_T: 16, DIE_X: 60, 
-    EXTRUDE_PUSH: 0.22, EXTRUDE_CUT: 0.08, // extrusion: push-out + cut = 0.30 s
+    EXTRUDE_PUSH: 0.5, EXTRUDE_CUT: 0.2, // extrusion: push-out + cut = 0.70 s (readable)
   };
 
   // ---------- RNG (seedable for tests) ----------
@@ -121,7 +123,7 @@
   function newGame() {
     const G = geo(), bw = G.bw;
     S = {
-      k: G.k, ppi: G.ppi, adhere: 0, adhereArmed: false, perfStreak: 0, rescueUsed: false,
+      k: G.k, ppi: G.ppi, playT: 0, bill: null, billCount: 0, billNext: qs.has('nobill') ? Infinity : T.BILL_MIN + rnd() * (T.BILL_MAX - T.BILL_MIN), /* ?nobill: tests force the event via a hook */ poofs: [], adhere: 0, adhereArmed: false, perfStreak: 0, rescueUsed: false,
       mode: 'play', t: 0, score: 0, floors: 0, height: 0, combo: 0, perfects: 0, maxCombo: 0,
       stack: [{ x: (W - bw) / 2, w: bw, y: 0, t: G.palletT, base: true }], extrudeLog: [], palletRect: null,
       falling: [], parts: [], flashes: [], cam: 0, camT: 0, shake: 0,
@@ -191,7 +193,7 @@
       if (id === 'heat-bond') S.heatNext = true;
       burst(board, 22); sfx.perfect(S.combo); buzz(12);
       host(0, 'cheer', 'Excellent', true); host(1, 'cheer', 'Good job', true); // every Perfect: both hosts cheer together
-      S.perfStreak++; if (S.perfStreak % ADHERE_EVERY === 0) earnAdhere();
+      S.perfStreak++; if (S.perfStreak % ADHERE_EVERY === 0) S.earnNow = true;
     } else {
       S.perfStreak = 0;
       if (usedAdhere) { S.adhereArmed = false; S.adhere--; updateAdhere(); sfx.grow(); }
@@ -207,11 +209,13 @@
     if (id === 'velvet-black') pts += 5;
     if (m.bonus) { pts += 5; }
     if (id === 'rain-shield' && S.rain > 0) pts *= 2;
-    S.score += pts; S.floors += floorsAdd; S.height = S.stack.length - 1;
+    if (S.bill && S.bill.on) pts *= T.BILL_SCORE; // WIDWAW: every board is worth 2x (multiplies trait bonuses)
+    S.lastPts = pts; S.score += pts; S.floors += floorsAdd; S.height = S.stack.length - 1;
     if (S.rain > 0) S.rain--;
-    if (S.floors >= T.RAIN_EVERY && S.rain === 0 && Math.floor(S.floors / T.RAIN_EVERY) > (S.rainCount || 0)) { S.rainCount = Math.floor(S.floors / T.RAIN_EVERY); S.rain = T.RAIN_LEN; host(1, 'idle', 'Rain! ☔ Watch out'); }
+    if (S.floors >= T.RAIN_EVERY && S.rain === 0 && !S.bill && Math.floor(S.floors / T.RAIN_EVERY) > (S.rainCount || 0)) { S.rainCount = Math.floor(S.floors / T.RAIN_EVERY); S.rain = T.RAIN_LEN; host(1, 'idle', 'Rain! ☔ Watch out'); }
     const ms = Math.floor(S.floors / T.MILESTONE); if (ms > (S.msCount || 0)) { S.msCount = ms; S.bonusNext = true; host(ms % 2, 'cheer', 'Bonus board for you!'); sfx.bonus(); }
     if (!collection.has(m.p.id)) { collection.add(m.p.id); store.set(LS.coll, [...collection]); S.unlockedNow.push(m.p.id); toast('New card: ' + m.p.name); }
+    if (S.earnNow) { S.earnNow = false; earnAdhere(); } // after the card toast so the ADHERE™ pop-up isn't overwritten
     $('score').textContent = S.score;
     S.camT = camTarget(board.y + board.t);
     spawn();
@@ -276,6 +280,38 @@
     else drop();
   }
 
+  // ---------- WIDWAW: Bill VanHorn event ----------
+  const boost = () => (S && S.bill && S.bill.on ? T.BILL_BOOST : 1); // applied on top of the board's own speed, so the exit restores it exactly
+  function hostSlot() { const G = geo(); return { x: W - 8 - G.hw + G.hw / 2, y: Math.round(groundY() - (S ? S.stack[0].t : G.palletT) - G.hh / 2) }; }
+  function startBill() {
+    if (!S || S.bill) return;
+    S.bill = { t: 0, dur: T.BILL_DUR, on: true, phase: 'in', outT: 0 }; S.billCount++;
+    const h = S.hostState[1]; h.anim = 'cheer'; h.t = 1.4; h.bubble = { text: 'WIDWAW', t: 2.4 };
+    const sl = hostSlot(); S.poofs.push({ x: sl.x, y: sl.y, t: 0 });
+    $('billBanner').hidden = false; updateBillBar(); sfx.bonus(); buzz([10, 30, 10]);
+  }
+  function endBill() {
+    if (!S || !S.bill || !S.bill.on) return;
+    S.bill.on = false; S.bill.phase = 'out'; S.bill.outT = 0; S.hostState[1].bubble = null; S.hostState[1].anim = 'idle';
+    const sl = hostSlot(); S.poofs.push({ x: sl.x, y: sl.y, t: 0 }); $('billBanner').hidden = true; sfx.grow();
+  }
+  function updateBill(dt) {
+    const b = S.bill;
+    if (!b) { if (S.playT >= S.billNext && S.floors >= T.BILL_MIN_FLOORS && !(S.rain > 0)) startBill(); return; }
+    if (b.on) { b.t += dt; if (b.phase === 'in' && b.t >= T.POOF) b.phase = 'on'; updateBillBar(); if (b.t >= b.dur) endBill(); }
+    else { b.outT += dt; if (b.outT >= T.POOF) { S.bill = null; S.billNext = S.playT + T.BILL_MIN + rnd() * (T.BILL_MAX - T.BILL_MIN); } }
+  }
+  function updateBillBar() { const b = S && S.bill; const el = $('billBar'); if (el && b) el.style.width = (Math.max(0, 1 - b.t / b.dur) * 100).toFixed(1) + '%'; }
+  function drawPoofs() {
+    for (const p of S.poofs) {
+      const k = p.t / T.POOF, a = 1 - k, r = 10 + k * 34;
+      ctx.save(); ctx.globalAlpha = a * 0.9; ctx.fillStyle = '#e9edf5';
+      for (let i = 0; i < 7; i++) { const an = i / 7 * Math.PI * 2; ctx.beginPath(); ctx.arc(p.x + Math.cos(an) * r * 0.7, p.y + Math.sin(an) * r * 0.5, 9 + 8 * (1 - k), 0, Math.PI * 2); ctx.fill(); }
+      ctx.fillStyle = '#f5c542'; for (let i = 0; i < 6; i++) { const an = i / 6 * Math.PI * 2 + 0.4; ctx.fillRect(p.x + Math.cos(an) * r * 1.2, p.y + Math.sin(an) * r * 0.9, 3, 3); }
+      ctx.restore();
+    }
+  }
+
   // ---------- toast ----------
   function toast(msg, icon) { // shown in the HUD pill so nothing stacks over the play area
     const el = $('deckBlurb'); el.textContent = (icon || '🃏 ') + msg; el.hidden = false; el.style.opacity = 1; clearTimeout(deckTimer);
@@ -290,14 +326,16 @@
     S.cam += (S.camT - S.cam) * Math.min(1, dt * 6);
     if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 30);
     for (const h of S.hostState) { if (h.anim === 'cheer') { h.t -= dt; if (h.t <= 0) h.anim = 'idle'; } if (h.bubble) { h.bubble.t -= dt; if (h.bubble.t <= 0) h.bubble = null; } }
+    if (S.mode === 'play') { S.playT += dt; updateBill(dt); }
+    for (let i = S.poofs.length - 1; i >= 0; i--) { S.poofs[i].t += dt; if (S.poofs[i].t > T.POOF) S.poofs.splice(i, 1); }
     if (S.mode === 'play' && S.moving) {
       const m = S.moving;
       if (m.extrude) {
-        const e = m.extrude; e.t += dt; const P = T.EXTRUDE_PUSH;
+        const e = m.extrude; e.t += dt * boost(); const P = T.EXTRUDE_PUSH;
         const k = Math.min(1, e.t / P); m.x = T.DIE_X - m.w + m.w * (1 - Math.pow(1 - k, 2));
         if (e.t >= P && !e.cut) { e.cut = true; e.cutAt = e.t; sparks(T.DIE_X + 2, m.y + m.t / 2); sfx.cut(); buzz(6); }
         if (e.t >= P + T.EXTRUDE_CUT) { m.x = T.DIE_X; m.extrude = null; m.extruded = true; S.extrudeLog.push({ ms: performance.now() - e.start, sim: e.t, id: m.p.id }); }
-      } else if (m.speed > 0) { m.x += m.dir * m.speed * dt;
+      } else if (m.speed > 0) { m.x += m.dir * m.speed * boost() * dt;
       const minX = T.DIE_X, maxX = W - m.w * 0.65;
       if (m.x > maxX) { m.x = maxX - (m.x - maxX); m.dir = -1; } else if (m.x < minX) { m.x = minX + (minX - m.x); m.dir = 1; } }
     }
@@ -432,15 +470,19 @@
   }
   function drawHosts(dt) {
     const G = geo(), hw = G.hw, hh = G.hh;
-    CFG.HOSTS.forEach((h, i) => {
+    CFG.HOSTS.forEach((h0, i) => {
+      const b = S && S.bill, guest = i === 1 && b && b.on && CFG.GUEST, h = guest || h0;
+      if (i === 1 && S) S.slot1 = h.id;
       const st = S ? S.hostState[i] : { anim: 'idle' };
       const fr = st.anim === 'cheer' ? SPR.FRAMES.cheer[Math.floor(performance.now() / 180) % 2] : SPR.FRAMES.idle[Math.floor((performance.now() / 600 + i * 0.5)) % 2];
       // hosts stand so their vertical midpoint lines up with the pallet's top deck in the opening view
-      const x = i === 0 ? 8 : W - 8 - hw, y = Math.round(groundY() - (S ? S.stack[0].t : G.palletT) - hh / 2);
+      let x = i === 0 ? 8 : W - 8 - hw, y = Math.round(groundY() - (S ? S.stack[0].t : G.palletT) - hh / 2);
+      // pop-in bounce: Bill on arrival, Cyrus on return
+      const popT = i === 1 && b ? (b.on ? b.t : b.outT) : -1, popY = popT >= 0 && popT < T.POOF + 0.25 ? -Math.round(Math.abs(Math.sin(Math.min(1, popT / (T.POOF + 0.25)) * Math.PI * 1.5)) * 16 * (1 - popT / (T.POOF + 0.25))) : 0;
       if (S) (S.hostRects || (S.hostRects = []))[i] = { x, y, w: hw, h: hh };
       ctx.fillStyle = '#00000066'; ctx.beginPath(); ctx.ellipse(x + hw / 2, y + hh + 1, hw * 0.45, 3, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#2a2f3e'; ctx.fillRect(x - 4, y + hh + 2, hw + 8, 2);
-      ctx.imageSmoothingEnabled = false; ctx.drawImage(SPR.frameCanvas(h, fr), Math.round(x), Math.round(y), hw, hh); ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingEnabled = false; ctx.drawImage(SPR.frameCanvas(h, fr), Math.round(x), Math.round(y + popY), hw, hh); ctx.imageSmoothingEnabled = true;
       ctx.fillStyle = '#9aa3b7'; ctx.font = '600 11px -apple-system,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText(h.short, x + hw / 2, y + hh + 13);
       if (st.bubble) bubble(st.bubble.text, x + hw / 2, y - 4, i === 0 ? 'left' : 'right', Math.min(1, st.bubble.t * 4));
     });
@@ -498,7 +540,7 @@
     if (S.rainDrops.length) { ctx.strokeStyle = '#8fb8ff66'; ctx.lineWidth = 1.2; ctx.beginPath(); for (const d of S.rainDrops) { ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + 4, d.y - 14); } ctx.stroke(); }
     if (S.combo >= 2 && S.mode === 'play') { ctx.fillStyle = '#f5c542'; ctx.font = '800 15px -apple-system,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Perfect ×' + S.combo, W / 2, (S.moving ? sy(S.moving.y) - S.moving.t - T.DEPTH_Y - 18 : H * 0.35)); }
     ctx.restore();
-    drawHosts();
+    drawHosts(); drawPoofs();
   }
 
   // ---------- loop ----------
@@ -587,10 +629,10 @@
   const screens = ['start', 'pause', 'over', 'coll', 'legal'];
   function show(id) { for (const s of screens) $(s).hidden = s !== id; $('hud').hidden = !(S && (S.mode === 'play' || S.mode === 'dying' || S.mode === 'pause') && (id == null || id === 'pause')); $('bottomBar').hidden = $('hud').hidden; if ($('hud').hidden) $('deckBlurb').hidden = true; layoutBottom(); }
   let collReturn = 'start';
-  function start() { ac(); newGame(); $('score').textContent = '0'; $('best').textContent = 'Best ' + best(); show(null); $('rescue').hidden = true; updateAdhere(); host(0, 'cheer', 'Let\u2019s stack!'); }
+  function start() { ac(); newGame(); $('score').textContent = '0'; $('best').textContent = 'Best ' + best(); show(null); $('rescue').hidden = true; $('billBanner').hidden = true; updateAdhere(); host(0, 'cheer', 'Let\u2019s stack!'); }
   function pause() { if (!S || S.mode !== 'play') return; S.mode = 'pause'; show('pause'); }
   function resume() { if (!S || S.mode !== 'pause') return; S.mode = 'play'; last = performance.now(); show(null); }
-  function gameOver() { $('rescue').hidden = true;
+  function gameOver() { $('rescue').hidden = true; $('billBanner').hidden = true;
     S.mode = 'over'; const b = best(), nb = S.score > b; if (nb) store.set(LS.best, S.score);
     $('finalScore').textContent = S.score;
     $('finalMeta').textContent = `Height ${S.height} boards · ${S.perfects} perfect${S.perfects === 1 ? '' : 's'} · best ${Math.max(b, S.score)}`;
@@ -697,7 +739,7 @@
   }
   // test hooks
   window.__fbs = {
-    computeDrop, T, geo, boards: BOARDS, toggleAdhere, earnAdhere: () => earnAdhere(), rescue, get S() { return S; }, start, drop, pause, resume, products: PRODUCTS,
+    computeDrop, T, geo, startBill, endBill, boost, updateBill, boards: BOARDS, toggleAdhere, earnAdhere: () => earnAdhere(), rescue, get S() { return S; }, start, drop, pause, resume, products: PRODUCTS,
     setMovingX(x) { if (S && S.moving) S.moving.x = x; }, setProduct(id, gl) { if (S && S.moving) { const p = productById[id]; S.moving.p = p; S.moving.look = lookFor(p); const g = (gl && p.gauges.find(x => x.label === gl)) || p.gauges[0]; S.moving.gauge = g; S.moving.t = thickFor(g); S.lineName = p.name + ' · ' + g.label; S.moving.speed = speedFor(p); } },
     spot: { next: spotAdvance, render: spotRender, durationFor, get id() { return curP().id; }, get fact() { return curF() && curF().id; }, get shownAt() { return spot.shownAt; }, history: spot.history, bags: () => ({ p: pBag.st, f: fBag.st }) }, facts: FACTS, layoutBottom,
     finishExtrusion() { return new Promise(r => { const c = () => (!S || !S.moving || !S.moving.extrude) ? r() : requestAnimationFrame(c); c(); }); },

@@ -1,5 +1,7 @@
 /* Hand-authored 32x48 pixel hosts, drawn from the Gilman family photo on gilmanbrothers.com/our-history/ (rect pixel art, no image assets).
    Evan: short silver hair, fair/ruddy, light-blue short-sleeve polo, brown belt, dark jeans, brown shoes, sturdy build.
+   Bill VanHorn (guest, from his labelled headshot on gilmanbrothers.com/contact-us/): short spiky dark-brown hair with a high hairline,
+   broad round face, dark rectangular glasses, big toothy smile, light stubble, white polo with a tan button. Trousers/shoes not in the photo (neutral).
    Cyrus: bald, fair, periwinkle long-sleeve button-up over a dark tee, black belt, charcoal trousers, black shoes, slim build. */
 (function () {
   const OUT = '#1a1c26';
@@ -12,6 +14,51 @@
     skin: '#eebea4', skin2: '#d39d84', cheek: '#e5a08c', dome: '#f7d3bf', temple: '#cfa892', brow: '#b8957f', eye: '#2b2a33', mouth: '#9b4a42',
     top: '#7393e6', top2: '#5574cc', collar: '#8eaaf0', tee: '#1b1b20', belt: '#1d1d22', buckle: '#c5c9d1', leg: '#4a4749', leg2: '#3a3739', shoe: '#121216', shoe2: '#3a3a44',
   };
+  const BILL = {
+    skin: '#f0b49a', skin2: '#d8967c', cheek: '#ea9a86', hair: '#3a2b22', hair2: '#5a4334', brow: '#3a2b22', eye: '#2b2a33', mouth: '#8f3f39',
+    glass: '#2a1716', lens: '#f4c7b3', stub: '#c99b87',
+    top: '#f4f5f7', top2: '#d4d8e0', collar: '#ffffff', btn: '#8a6a3a', belt: '#24242a', buckle: '#c5c9d1', leg: '#3a3f4f', leg2: '#2c3040', shoe: '#17171c', shoe2: '#3a3a44',
+  };
+  function billParts(f) {
+    const c = BILL, cheer = f >= 2, up = f === 1 ? 1 : 0, j = f === 3 ? -2 : f === 2 ? -1 : 0, b = up + j, L = [];
+    const P = (x, y, w, h, col) => L.push([x, y, w, h, col]);
+    P(8, 34 + j, 7, 10, c.leg); P(17, 34 + j, 7, 10, c.leg); P(14, 34 + j, 4, 3, c.leg);   // slacks
+    P(7, 44 + j, 8, 3, c.shoe); P(17, 44 + j, 8, 3, c.shoe);
+    P(6, 19 + b, 20, 14, c.top);                                                            // white polo (solid build)
+    if (!cheer) { P(3, 20 + b, 4, 5, c.top); P(25, 20 + b, 4, 5, c.top); P(3, 25 + b, 3, 7, c.skin); P(26, 25 + b, 3, 7, c.skin); }
+    else { const s = f === 3 ? 1 : 0; P(3, 17 + b, 4, 5, c.top); P(25, 17 + b, 4, 5, c.top); P(3 - s, 9 + b, 3, 8, c.skin); P(26 + s, 9 + b, 3, 8, c.skin); P(2 - s, 6 + b, 4, 3, c.skin); P(26 + s, 6 + b, 4, 3, c.skin); }
+    P(12, 17 + b, 8, 3, c.skin);                                                            // neck
+    P(9, 4 + b, 14, 14, c.skin); P(10, 18 + b, 12, 1, c.skin); P(8, 10 + b, 1, 4, c.skin); P(23, 10 + b, 1, 4, c.skin); // broad round face + ears
+    P(10, 1 + b, 12, 3, c.hair); P(9, 3 + b, 2, 5, c.hair); P(21, 3 + b, 2, 5, c.hair);   // short spiky dark hair
+    return L;
+  }
+  function billDetail(x, f) {
+    const c = BILL, cheer = f >= 2, up = f === 1 ? 1 : 0, j = f === 3 ? -2 : f === 2 ? -1 : 0, b = up + j;
+    const p = (X, Y, w = 1, h = 1, col) => { x.fillStyle = col; x.fillRect(X, Y, w, h); };
+    p(10, 0 + b, 1, 1, c.hair); p(13, 0 + b, 1, 1, c.hair); p(16, 0 + b, 1, 1, c.hair); p(19, 0 + b, 1, 1, c.hair); // spikes
+    p(12, 1 + b, 1, 1, c.hair2); p(15, 1 + b, 1, 1, c.hair2); p(18, 2 + b, 1, 1, c.hair2);
+    p(13, 3 + b, 6, 1, c.skin); p(14, 2 + b, 4, 1, '#c99a86');                             // high hairline / thinning on top
+    p(14, 4 + b, 3, 1, '#fbd9c8');                                                          // forehead shine
+    p(11, 8 + b, 4, 1, c.brow); p(17, 8 + b, 4, 1, c.brow);                                 // dark brows
+    // dark rectangular glasses
+    p(10, 9 + b, 6, 1, c.glass); p(16, 9 + b, 6, 1, c.glass); p(10, 12 + b, 6, 1, c.glass); p(16, 12 + b, 6, 1, c.glass);
+    p(10, 10 + b, 1, 2, c.glass); p(15, 10 + b, 2, 2, c.glass); p(21, 10 + b, 1, 2, c.glass); p(8, 10 + b, 2, 1, c.glass); p(22, 10 + b, 1, 1, c.glass);
+    p(11, 10 + b, 4, 2, c.lens); p(17, 10 + b, 4, 2, c.lens);
+    p(12, 10 + b, 2, 1, '#e9b7a2'); p(18, 10 + b, 2, 1, '#e9b7a2');                     // lids
+    if (f === 1) { p(12, 11 + b, 2, 1, c.skin2); p(18, 11 + b, 2, 1, c.skin2); } else { p(12, 11 + b, 2, 1, c.eye); p(18, 11 + b, 2, 1, c.eye); } // smiling eyes behind the lenses
+    p(15, 13 + b, 2, 2, c.skin2);                                                           // nose
+    p(10, 13 + b, 2, 2, c.cheek); p(20, 13 + b, 2, 2, c.cheek);
+    p(10, 15 + b, 2, 3, c.stub); p(20, 15 + b, 2, 3, c.stub); p(11, 18 + b, 10, 1, c.stub); p(13, 17 + b, 6, 1, c.stub); // stubble
+    if (cheer) { p(12, 15 + b, 8, 2, c.mouth); p(12, 15 + b, 8, 1, '#ffffff'); p(14, 16 + b, 4, 1, '#c45a52'); }
+    else { p(12, 15 + b, 8, 1, c.mouth); p(13, 15 + b, 6, 1, '#fbfbf7'); p(12, 14 + b, 1, 1, c.mouth); p(19, 14 + b, 1, 1, c.mouth); p(13, 16 + b, 6, 1, c.mouth); } // big toothy smile
+    p(10, 19 + b, 5, 2, c.collar); p(17, 19 + b, 5, 2, c.collar); p(10, 21 + b, 5, 1, c.top2); p(17, 21 + b, 5, 1, c.top2); // white collar
+    p(15, 19 + b, 2, 5, c.top2); p(15, 22 + b, 1, 1, c.btn);                               // placket + tan button
+    p(23, 20 + b, 3, 12, c.top2); p(6, 31 + b, 20, 1, c.top2);                              // shading
+    if (!cheer) { p(3, 24 + b, 4, 1, c.top2); p(25, 24 + b, 4, 1, c.top2); }
+    p(6, 32 + j, 20, 2, c.belt); p(15, 32 + j, 2, 2, c.buckle);
+    p(9, 35 + j, 1, 8, c.leg2); p(22, 35 + j, 1, 8, c.leg2);
+    p(8, 44 + j, 3, 1, c.shoe2); p(18, 44 + j, 3, 1, c.shoe2);
+  }
   function evanParts(f) {
     const c = EVAN, cheer = f >= 2, up = f === 1 ? 1 : 0, j = f === 3 ? -2 : f === 2 ? -1 : 0, b = up + j, L = [];
     const P = (x, y, w, h, col) => L.push([x, y, w, h, col]);
@@ -80,7 +127,7 @@
     p(12, 35 + j, 1, 9, c.leg2); p(19, 35 + j, 1, 9, c.leg2);                               // trouser creases
     p(10, 44 + j, 3, 1, c.shoe2); p(17, 44 + j, 3, 1, c.shoe2);                             // polished shine
   }
-  const DEF = { evan: [evanParts, evanDetail], cyrus: [cyrusParts, cyrusDetail] };
+  const DEF = { evan: [evanParts, evanDetail], cyrus: [cyrusParts, cyrusDetail], bill: [billParts, billDetail] };
   const cache = {};
   function frameCanvas(host, frame) {
     const key = host.id + frame; if (cache[key]) return cache[key];

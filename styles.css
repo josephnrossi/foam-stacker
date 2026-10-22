@@ -124,3 +124,11 @@ h2{margin:0;font-size:28px;font-weight:800}
 .modal p{margin:0 0 10px;font-size:15px}
 .modal[hidden]{display:none}
 .coll-h{grid-column:1/-1;margin:10px 2px 2px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+
+#billBanner{position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);width:min(88vw,360px);text-align:center;font-size:14px;font-weight:700;line-height:1.3;color:#10131b;background:linear-gradient(90deg,#ffd75e,#f5a742);border:2px solid #fff3c4;border-radius:12px;padding:6px 10px 9px;box-shadow:0 6px 20px #0008;pointer-events:none!important;animation:billPop .35s cubic-bezier(.3,1.6,.5,1)}
+#billBanner[hidden]{display:none}
+#billBanner b{font-weight:900;letter-spacing:.04em}
+#billBanner .x2{display:inline-block;margin-left:4px;background:#10131b;color:#ffd75e;border-radius:6px;padding:0 5px;font-size:12px}
+#billBanner .bar{margin-top:5px;height:6px;border-radius:3px;background:#10131b55;overflow:hidden}
+#billBanner .bar i{display:block;height:100%;width:100%;background:#10131b;border-radius:3px}
+@keyframes billPop{from{transform:translateX(-50%) scale(.6);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}

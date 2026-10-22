@@ -48,7 +48,7 @@ async function suite(browserType, deviceName, tag) {
   const touch = !!opts.hasTouch;
   const T = n => `${tag}: ${n}`;
 
-  await p.goto(BASE + '?seed=7&nospot'); await p.waitForTimeout(600);
+  await p.goto(BASE + '?seed=7&nospot&nobill'); await p.waitForTimeout(600);
   ok(T('start screen visible'), await p.isVisible('#start'));
   ok(T('noindex meta'), (await p.getAttribute('meta[name=robots]', 'content') || '').includes('noindex'));
   ok(T('Demo label shown'), await p.isVisible('#start .demo'));
@@ -194,6 +194,33 @@ async function suite(browserType, deviceName, tag) {
   const ad2 = await p.evaluate(async () => { const f = window.__fbs; await f.finishExtrusion(); const S = f.S; S.rain = 0; S.combo = 3; f.toggleAdhere(); const armed = S.adhereArmed; f.freeze(); const tp = S.stack[S.stack.length - 1], off = Math.round(tp.w * 0.2); f.setMovingX(tp.x + off); const w0 = S.moving.w, x0 = S.moving.x, id = S.moving.p.id;
     f.drop(); const b = S.stack[S.stack.length - 1]; return { armed, w0, x0, w: b.w, x: b.x, adhered: !!b.adhered, n: S.adhere, combo: S.combo, armedAfter: S.adhereArmed, falling: S.falling.length, id }; });
   ok(T('armed ADHERE™ drop: overhang held (not trimmed), tabs drawn, combo kept, one used'), ad2.armed && ad2.w === ad2.w0 && ad2.x === ad2.x0 && ad2.adhered && ad2.n === 1 && ad2.combo >= 3 && !ad2.armedAfter, ad2);
+  // WIDWAW: Bill VanHorn event
+  await p.evaluate(() => window.__fbs.finishExtrusion());
+  const trig = await p.evaluate(() => { const f = window.__fbs, S = f.S, r = {}; S.bill = null; S.billNext = 0;
+    const fl = S.floors; S.floors = 5; S.rain = 0; f.updateBill(0); r.earlyFloors = !!S.bill;
+    S.floors = Math.max(fl, 12); S.rain = 3; f.updateBill(0); r.rain = !!S.bill;
+    S.rain = 0; S.billNext = S.playT + 100; f.updateBill(0); r.notYet = !!S.bill;
+    r.window = [f.T.BILL_MIN, f.T.BILL_MAX, f.T.BILL_MIN_FLOORS, f.T.BILL_DUR]; return r; });
+  ok(T('WIDWAW: never before floor 10, never in rain, only after its 25–45 s timer'), !trig.earlyFloors && !trig.rain && !trig.notYet && trig.window[0] === 25 && trig.window[1] === 45 && trig.window[2] === 10 && trig.window[3] >= 10 && trig.window[3] <= 12, trig);
+  const v0 = await p.evaluate(() => { const f = window.__fbs, S = f.S; S.moving.speed = S.moving.speed || 100; return { eff: S.moving.speed * f.boost(), base: S.moving.speed, slot: S.slot1 }; });
+  await p.evaluate(() => { const S = window.__fbs.S; S.billNext = S.playT; window.__fbs.updateBill(0); });
+  await p.waitForTimeout(450);
+  const bw = await p.evaluate(() => { const f = window.__fbs, S = f.S, bn = document.getElementById('billBanner'), bar = document.getElementById('billBar'); return { on: !!(S.bill && S.bill.on), slot: S.slot1, bubble: S.hostState[1].bubble && S.hostState[1].bubble.text, banner: !bn.hidden && bn.textContent, bar: parseFloat(bar.style.width), eff: S.moving.speed * f.boost(), boost: f.boost(), dur: S.bill && S.bill.dur }; });
+  ok(T('WIDWAW: Bill takes Cyrus\'s spot and shouts "WIDWAW" with the banner'), v0.slot === 'cyrus' && bw.on && bw.slot === 'bill' && bw.bubble === 'WIDWAW' && bw.banner && bw.banner.includes('WIDWAW! Faster boards, bonus points!'), { v0, bw });
+  ok(T('WIDWAW: boards ~40% faster (slide + extrusion)'), Math.abs(bw.boost - 1.4) < 1e-9 && Math.abs(bw.eff / v0.eff - 1.4) < 1e-9, { v0, bw });
+  await p.waitForTimeout(500);
+  const bar2 = await p.evaluate(() => parseFloat(document.getElementById('billBar').style.width));
+  ok(T('WIDWAW: visible timer bar counts down'), bw.bar < 100 && bar2 < bw.bar && await p.isVisible('#billBar'), { first: bw.bar, later: bar2 });
+  const pts = await p.evaluate(async () => { const f = window.__fbs, S = f.S; await f.finishExtrusion(); f.setProduct('insite-psa', '3/16"'); f.freeze(); S.rain = 0; S.moving.bonus = false; f.setMovingX(S.stack[S.stack.length - 1].x + 9); f.drop(); return S.lastPts; });
+  ok(T('WIDWAW: each board scores 2×'), pts === 2, pts);
+  const pb2 = await p.evaluate(async () => { const f = window.__fbs, S = f.S; await f.finishExtrusion(); for (const h of S.hostState) h.bubble = null; f.freeze(); f.setMovingX(S.stack[S.stack.length - 1].x); f.drop(); await new Promise(r => setTimeout(r, 60)); return { t0: S.hostState[0].bubble && S.hostState[0].bubble.text, t1: S.hostState[1].bubble && S.hostState[1].bubble.text, slot: S.slot1 }; });
+  ok(T('WIDWAW: on a Perfect Evan says "Excellent" and Bill says "Good job"'), pb2.t0 === 'Excellent' && pb2.t1 === 'Good job' && pb2.slot === 'bill', pb2);
+  await p.evaluate(() => { const S = window.__fbs.S; S.bill.t = S.bill.dur - 0.02; });
+  await p.waitForTimeout(700);
+  const billAfter = await p.evaluate(() => { const f = window.__fbs, S = f.S; return { bill: S.bill, slot: S.slot1, boost: f.boost(), banner: document.getElementById('billBanner').hidden, next: S.billNext - S.playT }; });
+  ok(T('WIDWAW ends: Bill poofs out, Cyrus returns, speed restored exactly, next event 25–45 s away'), billAfter.bill === null && billAfter.slot === 'cyrus' && billAfter.boost === 1 && billAfter.banner && billAfter.next >= 24 && billAfter.next <= 45, billAfter);
+  const pts1 = await p.evaluate(async () => { const f = window.__fbs, S = f.S; await f.finishExtrusion(); f.setProduct('insite-psa', '3/16"'); const sp = S.moving.speed; f.freeze(); S.moving.bonus = false; f.setMovingX(S.stack[S.stack.length - 1].x + 9); f.drop(); return { pts: S.lastPts, sp }; });
+  ok(T('after WIDWAW: scoring back to 1×'), pts1.pts === 1, pts1);
   ok(T('fact bar shows same fact as start screen'), await p.isVisible('#factBar') && (await p.getAttribute('#factBar', 'data-fact')) === factBefore);
   // --- pallet + extrusion line ---
   const ex0 = await p.evaluate(() => { const S = window.__fbs.S, m = S.moving; return { extruding: !!m.extrude, name: S.lineName, pname: m.p.name, n: S.stack.length }; });
@@ -202,7 +229,7 @@ async function suite(browserType, deviceName, tag) {
   ok(T('board cannot be dropped while still on the extrusion line'), (await p.evaluate(() => window.__fbs.S.stack.length)) === ex0.n);
   await p.evaluate(() => window.__fbs.finishExtrusion());
   const ex1 = await p.evaluate(() => { const S = window.__fbs.S; return { log: S.extrudeLog, x: S.moving.x, die: window.__fbs.T.DIE_X, extr: S.moving.extruded, rotation: window.__fbs.spot.id }; });
-  ok(T('extrusion (push + cut) completes within 0.4 s sim / 0.5 s wall'), ex1.log.length >= 1 && ex1.log.every(e => e.sim <= 0.4 && e.ms <= 500) && ex1.extr, ex1.log);
+  ok(T('extrusion (push + cut) takes ~0.7 s sim and completes within 0.9 s wall'), ex1.log.length >= 1 && ex1.log.every(e => e.sim >= 0.68 && e.sim <= 0.75 && e.ms <= 900) && ex1.extr, ex1.log);
   ok(T('extrusion does not interrupt the spotlight rotation'), ex1.rotation === spotBefore);
   const pal = await p.evaluate(() => { const S = window.__fbs.S, r = S.palletRect, c = document.getElementById('game'), x2 = c.getContext('2d'), dpr = c.width / innerWidth;
     const px = x2.getImageData(Math.round((r.x + r.w * 0.25) * dpr), Math.round((r.y + r.h - 3) * dpr), 1, 1).data; const bb = document.getElementById('bottomBar').getBoundingClientRect();
@@ -234,9 +261,11 @@ async function suite(browserType, deviceName, tag) {
   const fl0 = await p.evaluate(() => window.__fbs.S.floors);
   await placeAndTap(p, touch, 0, 'ryno-board');
   ok(T('Ryno Board counts as 2 floors'), (await p.evaluate(() => window.__fbs.S.floors)) === fl0 + 2);
+  await p.evaluate(() => window.__fbs.finishExtrusion()); await p.evaluate(() => { window.__fbs.S.moving.bonus = false; }); // isolate the trait from a milestone bonus board
   const s0 = await p.evaluate(() => window.__fbs.S.score);
   await placeAndTap(p, touch, 20, 'resilient-mount');
-  ok(T('Resilient MOUNT +5 bonus'), (await p.evaluate(() => window.__fbs.S.score)) === s0 + 6);
+  const rm = await p.evaluate(() => { const S = window.__fbs.S, b = S.stack[S.stack.length - 1]; return { score: S.score, last: S.lastPts, id: b.p.id, trait: b.p.trait.id, bill: !!S.bill }; });
+  ok(T('Resilient MOUNT +5 bonus'), rm.score === s0 + 6, { s0, ...rm });
   const coll = await p.evaluate(() => window.__fbs.collection());
   ok(T('stacked boards unlock in collection'), ['insite-reveal', 'insite-psa', 'ryno-board', 'resilient-mount'].every(id => coll.includes(id)), coll);
   // Gilco bounce back
@@ -261,7 +290,7 @@ async function suite(browserType, deviceName, tag) {
   await p.evaluate(() => window.__fbs.finishExtrusion()); await p.evaluate(() => { const f = window.__fbs, S = f.S; f.setMovingX(S.stack[S.stack.length - 1].x + 1); });
   await tapCanvas(p, touch); await p.waitForTimeout(160);
   const gs = await p.evaluate(() => ({ h: window.__fbs.S.height, score: window.__fbs.S.score, txt: document.getElementById('score').textContent }));
-  ok(T('every landed board passed through the extrusion line'), await p.evaluate(() => window.__fbs.S.stack.slice(1).every(b => b.extruded === true) && window.__fbs.S.extrudeLog.every(e => e.sim <= 0.4 && e.ms <= 500)), await p.evaluate(() => window.__fbs.S.extrudeLog.map(e => Math.round(e.ms))));
+  ok(T('every landed board passed through the extrusion line'), await p.evaluate(() => window.__fbs.S.stack.slice(1).every(b => b.extruded === true) && window.__fbs.S.extrudeLog.every(e => e.sim <= 0.75 && e.ms <= 900)), await p.evaluate(() => window.__fbs.S.extrudeLog.map(e => Math.round(e.ms))));
   ok(T('score HUD updates'), gs.txt === String(gs.score) && gs.h >= 14, gs);
   ok(T('play: no overflow'), await noOverflow(p));
   const shotName = { iphone15: 'iphone15-gameplay', iphoneSE: 'iphonese-gameplay', chromium: 'chromium-gameplay', pixel7: 'v3-android-pixel7-gameplay', galaxyS8: 'v3-android-galaxys8-gameplay' }[tag];
@@ -331,7 +360,7 @@ async function suite(browserType, deviceName, tag) {
   if (browserType === 'chromium') {
     await p.goto(BASE); await p.waitForTimeout(1500);
     const sw = await p.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); return { reg: !!r, caches: await caches.keys() }; });
-    ok(T('service worker registered with fbs-v3 cache'), sw.reg && sw.caches.includes('fbs-v3'), sw);
+    ok(T('service worker registered with fbs-v4 cache'), sw.reg && sw.caches.includes('fbs-v4'), sw);
   }
   if (tag === 'pixel7' || tag === 'galaxyS8') {
     await p.goto(BASE + '?nospot'); await p.waitForTimeout(400);

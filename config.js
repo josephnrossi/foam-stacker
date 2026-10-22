@@ -12,4 +12,8 @@ window.FBS_CONFIG = {
     { id: 'cyrus', name: 'Cyrus Gilman', short: 'Cyrus' },
   ],
   HOSTS_SOURCE: 'https://gilmanbrothers.com/our-history/',
+  // Guest: pops into Cyrus's spot during the WIDWAW event. Drawn from his labelled headshot on the Contact Us page.
+  GUEST: { id: 'bill', name: 'Bill VanHorn', short: 'Bill', title: 'Vice President of Commercial Strategy' },
+  GUEST_SOURCE: 'https://gilmanbrothers.com/contact-us/',
+  GUEST_PHOTO: 'https://gilmanbrothers.com/wp-content/uploads/2024/02/bill-vanhorn.jpg',
 };
