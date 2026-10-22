@@ -38,26 +38,35 @@ TRAIT = {
  'resilient-print': ('spring-back','Spring-Back',     'Keeps 25% of the overhang that would have been trimmed.',      'Spring-Back technology'),
  'resilient-mount': ('velvet-black','Velvet Black',   '+5 bonus points for a black board.',                           'Velvet black core'),
  'resilient-align': ('slide-align','Slide to Align',  'Lands within 16 px? It slides into perfect alignment.',        'Slidable, pressure-activated adhesive'),
- 'adhere':          ('hang-tight', 'Hang Tight',      'Grows the stack back 10 px when it lands.',                    'Holds up to ½ lb per sq. in. on clean receptive surfaces'),
+ 'adhere':          ('adhere-fastener', 'ADHERE™ Fastener', 'Power-up, not a board: earn one every 3 Perfects in a row (keep up to 2). Tap it to arm your next drop – the overhang is fastened in place instead of trimmed, and your combo is kept (it removes damage-free).', 'Holds up to ½ lb per sq. in. on clean receptive surfaces'),
 }
 BLURB = {  # 1-2 punchy lines, only catalog facts
  'infinity': 'Extra-rigid styrene faces on 2.5x-density foam. Print it, ship it flat, then cold-bend it into 3D displays.',
  'eaglecell': '100% paper, 100% recyclable honeycomb board with I-beam-like rigidity: the eco alternative to plastic, metal and wood.',
  'insite-reveal': 'Bright white clay-coated foamboard whose Reveal® center holds its thickness. UV stabilized, warp and dent resistant.',
  'ryno-board': 'The highest-density foam in the line. Double-thick liners resist crushing, warping and denting.',
- 'insite-colors': 'Colored clay-coated faces on the same Reveal® foam center. Smooth, lightweight and UV stabilized.',
+ 'insite-colors': 'Clay-coated colored paper on both faces with a moisture-resistant coating, made in the USA.',
  'insite-canvas': 'Embossed faux-canvas texture, 1- or 2-sided, that V-cuts cleanly for faux gallery wraps.',
  'gilco-styrene': 'Economical 100% styrene sheets: dimensionally stable, impact resistant, and easy to cut, bend and bond.',
  'insite-ha': 'Heat-activated adhesive on one side means no mounting tissues or films. Air Release Technology prevents bubbles.',
  'insite-psa': 'Cold mounting, no heat required. Low-Tack repositions; High-Tack grabs immediately.',
  'insite-acid-free': 'Acid-free, PAT-compliant liners of 100% high alpha cellulose for preservation mounting and framing.',
- 'mountcor': 'Bonds at just 130°F, the lowest bonding temperature per Gilman. Permanent, acid-free, no air entrapment.',
+ 'mountcor': 'Bonds at just 130°F, the lowest bonding temperature per Gilman, with universal permanent adhesion.',
  'mountcor-canvas': 'Mounts printed canvas and giclées that can\'t be stretched, with full tear strength in about 4 minutes in a vacuum press.',
  'resilient-print': 'Velvety soft-touch board for direct digital printing, with a display-ready velvet black edge. 27% lighter.',
- 'resilient-mount': 'Permanent PSA on a soft-touch closed-cell core: Spring-Back technology, dent-proof finish, velvet black core.',
- 'resilient-align': 'Slidable, pressure-activated adhesive lets you reposition before it bonds. Air-release and display-ready within minutes.',
+ 'resilient-mount': 'Permanent pressure-sensitive adhesive for photo and print mounting, even on brushed aluminum, gold and fabric surfaces.',
+ 'resilient-align': 'A slidable, non-tack surface lets you reposition before pressure bonds it. Pairs with ADHERE™ wall fasteners.',
  'adhere': 'Removable wall fastener that holds up to ½ lb per sq. in. and comes off painted walls damage-free.',
 }
+# In-game gauges: every listed gauge from the catalog, except extremes that can't be drawn at the shared thickness scale
+# (Gilco .015" would be ~0.3px; EAGLECELL 4" would be ~75px). Thickness in px = inches x one shared px-per-inch.
+SKIP = {('gilco-styrene', '.015"'): 'sub-pixel at game scale', ('eaglecell', '4"'): 'too thick to stack (max gauge)'}
+def inches(g):
+  g = g.strip().rstrip('"')
+  if g.endswith('mm'): return round(float(g[:-2]) / 25.4, 4)
+  if '/' in g: a, b = g.split('/'); return float(a) / float(b)
+  return float(g)
+ACCESSORY = {'adhere'}  # ADHERE™ is a removable wall fastener, not a board: it's a power-up in the game
 out = []
 for p in cat['products']:
   pid = p['id']; L = LOOK[pid]; tid, tname, ttext, basis = TRAIT[pid]
@@ -67,6 +76,9 @@ for p in cat['products']:
   assert L['gauge'] in p['gauges']['listed'], (pid, L['gauge'])
   out.append(dict(id=pid, name=p['name'], tagline=p['tagline'], family=p['family'], description=p['description'],
     url=p['url'], colors=p['colors'], gauge=L['gauge'], moistureResistant=moist,
+    kind='accessory' if pid in ACCESSORY else 'board',
+    gauges=[] if pid in ACCESSORY else [dict(label=g, inches=inches(g)) for g in p['gauges']['listed'] if (pid, g) not in SKIP],
+    gaugesSkipped=[g for g in p['gauges']['listed'] if (pid, g) in SKIP], gaugeSource=p['gauges'].get('listedSource', ''),
     look={k:v for k,v in L.items() if k!='gauge'}, blurb=BLURB[pid], trait=dict(id=tid, name=tname, text=ttext, basis=basis)))
 assert len({o['trait']['id'] for o in out}) == len(out)
 assert all(len(o['blurb']) <= 130 for o in out), [len(o['blurb']) for o in out]

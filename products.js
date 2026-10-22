@@ -15,6 +15,23 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "3/16\"",
   "moistureResistant": false,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": "3mm",
+    "inches": 0.1181
+   },
+   {
+    "label": "3/16\"",
+    "inches": 0.1875
+   },
+   {
+    "label": "1/2\"",
+    "inches": 0.5
+   }
+  ],
+  "gaugesSkipped": [],
+  "gaugeSource": "Technical Specifications – INFINITY PDF (3mm, 3/16\", 1/2\")",
   "look": {
    "t": 15,
    "gloss": 1,
@@ -58,6 +75,21 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "1/2\"",
   "moistureResistant": false,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": "1/4\"",
+    "inches": 0.25
+   },
+   {
+    "label": "1/2\"",
+    "inches": 0.5
+   }
+  ],
+  "gaugesSkipped": [
+   "4\""
+  ],
+  "gaugeSource": "Product page min/max; 1/2\" shown in gallery (Beach Chairs, Artisan Oil Display)",
   "look": {
    "t": 26,
    "pattern": "honeycomb",
@@ -94,6 +126,31 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "3/16\"",
   "moistureResistant": true,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": "1/8\"",
+    "inches": 0.125
+   },
+   {
+    "label": "3/16\"",
+    "inches": 0.1875
+   },
+   {
+    "label": "1/4\"",
+    "inches": 0.25
+   },
+   {
+    "label": "1/2\"",
+    "inches": 0.5
+   },
+   {
+    "label": "1\"",
+    "inches": 1.0
+   }
+  ],
+  "gaugesSkipped": [],
+  "gaugeSource": "Technical-Specifications-Insite PDF (1/8, 3/16, 1/4, 1/2) + page max 1\"",
   "look": {
    "t": 15,
    "variants": [
@@ -127,6 +184,31 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "1/2\"",
   "moistureResistant": false,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": "3/16\"",
+    "inches": 0.1875
+   },
+   {
+    "label": "1/4\"",
+    "inches": 0.25
+   },
+   {
+    "label": "1/2\"",
+    "inches": 0.5
+   },
+   {
+    "label": "3/4\"",
+    "inches": 0.75
+   },
+   {
+    "label": "1\"",
+    "inches": 1.0
+   }
+  ],
+  "gaugesSkipped": [],
+  "gaugeSource": "Technical Specifications – Ryno Board PDF",
   "look": {
    "t": 22,
    "liner": 3,
@@ -157,6 +239,27 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "3/16\"",
   "moistureResistant": true,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": "1/8\"",
+    "inches": 0.125
+   },
+   {
+    "label": "3/16\"",
+    "inches": 0.1875
+   },
+   {
+    "label": "1/4\"",
+    "inches": 0.25
+   },
+   {
+    "label": "1/2\"",
+    "inches": 0.5
+   }
+  ],
+  "gaugesSkipped": [],
+  "gaugeSource": "Page range 1/8\"–1/2\"; discrete gauges from InSite tech spec",
   "look": {
    "t": 15,
    "variants": [
@@ -186,7 +289,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
-  "blurb": "Colored clay-coated faces on the same Reveal® foam center. Smooth, lightweight and UV stabilized.",
+  "blurb": "Clay-coated colored paper on both faces with a moisture-resistant coating, made in the USA.",
   "trait": {
    "id": "color-pop",
    "name": "Color Pop",
@@ -206,6 +309,15 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "3/16\"",
   "moistureResistant": false,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": "3/16\"",
+    "inches": 0.1875
+   }
+  ],
+  "gaugesSkipped": [],
+  "gaugeSource": "Product page",
   "look": {
    "t": 15,
    "pattern": "canvas",
@@ -236,6 +348,17 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": ".080\"",
   "moistureResistant": false,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": ".080\"",
+    "inches": 0.08
+   }
+  ],
+  "gaugesSkipped": [
+   ".015\""
+  ],
+  "gaugeSource": "Product page min/max (intermediate gauges not listed)",
   "look": {
    "t": 8,
    "solid": 1,
@@ -267,6 +390,19 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "3/16\"",
   "moistureResistant": false,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": "1/8\"",
+    "inches": 0.125
+   },
+   {
+    "label": "3/16\"",
+    "inches": 0.1875
+   }
+  ],
+  "gaugesSkipped": [],
+  "gaugeSource": "Product page + master brochure",
   "look": {
    "t": 15,
    "backing": "#d8b25a",
@@ -302,6 +438,15 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "3/16\"",
   "moistureResistant": false,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": "3/16\"",
+    "inches": 0.1875
+   }
+  ],
+  "gaugesSkipped": [],
+  "gaugeSource": "Product page",
   "look": {
    "t": 15,
    "backingVariants": [
@@ -339,6 +484,15 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "3/16\"",
   "moistureResistant": false,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": "3/16\"",
+    "inches": 0.1875
+   }
+  ],
+  "gaugesSkipped": [],
+  "gaugeSource": "Product page",
   "look": {
    "t": 15,
    "variants": [
@@ -369,6 +523,15 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "3/16\"",
   "moistureResistant": false,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": "3/16\"",
+    "inches": 0.1875
+   }
+  ],
+  "gaugesSkipped": [],
+  "gaugeSource": "Product page",
   "look": {
    "t": 15,
    "backing": "#cfd8e3",
@@ -384,7 +547,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
-  "blurb": "Bonds at just 130°F, the lowest bonding temperature per Gilman. Permanent, acid-free, no air entrapment.",
+  "blurb": "Bonds at just 130°F, the lowest bonding temperature per Gilman, with universal permanent adhesion.",
   "trait": {
    "id": "permanent",
    "name": "Permanent Bond",
@@ -404,6 +567,15 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "3/16\"",
   "moistureResistant": false,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": "3/16\"",
+    "inches": 0.1875
+   }
+  ],
+  "gaugesSkipped": [],
+  "gaugeSource": "Product page",
   "look": {
    "t": 15,
    "backing": "#cfd8e3",
@@ -435,6 +607,23 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "1/2\"",
   "moistureResistant": true,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": "1/2\"",
+    "inches": 0.5
+   },
+   {
+    "label": "3/4\"",
+    "inches": 0.75
+   },
+   {
+    "label": "1\"",
+    "inches": 1.0
+   }
+  ],
+  "gaugesSkipped": [],
+  "gaugeSource": "Product page",
   "look": {
    "t": 22,
    "velvet": 1,
@@ -465,6 +654,23 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "1/2\"",
   "moistureResistant": true,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": "1/2\"",
+    "inches": 0.5
+   },
+   {
+    "label": "3/4\"",
+    "inches": 0.75
+   },
+   {
+    "label": "1\"",
+    "inches": 1.0
+   }
+  ],
+  "gaugesSkipped": [],
+  "gaugeSource": "Product page",
   "look": {
    "t": 22,
    "velvet": 1,
@@ -475,7 +681,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
-  "blurb": "Permanent PSA on a soft-touch closed-cell core: Spring-Back technology, dent-proof finish, velvet black core.",
+  "blurb": "Permanent pressure-sensitive adhesive for photo and print mounting, even on brushed aluminum, gold and fabric surfaces.",
   "trait": {
    "id": "velvet-black",
    "name": "Velvet Black",
@@ -495,6 +701,19 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "1/2\"",
   "moistureResistant": true,
+  "kind": "board",
+  "gauges": [
+   {
+    "label": "1/2\"",
+    "inches": 0.5
+   },
+   {
+    "label": "3/4\"",
+    "inches": 0.75
+   }
+  ],
+  "gaugesSkipped": [],
+  "gaugeSource": "Product page",
   "look": {
    "t": 22,
    "velvet": 1,
@@ -505,7 +724,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
-  "blurb": "Slidable, pressure-activated adhesive lets you reposition before it bonds. Air-release and display-ready within minutes.",
+  "blurb": "A slidable, non-tack surface lets you reposition before pressure bonds it. Pairs with ADHERE™ wall fasteners.",
   "trait": {
    "id": "slide-align",
    "name": "Slide to Align",
@@ -525,6 +744,10 @@ window.FBS_PRODUCTS = [
   ],
   "gauge": "0.110\"",
   "moistureResistant": false,
+  "kind": "accessory",
+  "gauges": [],
+  "gaugesSkipped": [],
+  "gaugeSource": "Product page",
   "look": {
    "t": 9,
    "variants": [
@@ -537,9 +760,9 @@ window.FBS_PRODUCTS = [
   },
   "blurb": "Removable wall fastener that holds up to ½ lb per sq. in. and comes off painted walls damage-free.",
   "trait": {
-   "id": "hang-tight",
-   "name": "Hang Tight",
-   "text": "Grows the stack back 10 px when it lands.",
+   "id": "adhere-fastener",
+   "name": "ADHERE™ Fastener",
+   "text": "Power-up, not a board: earn one every 3 Perfects in a row (keep up to 2). Tap it to arm your next drop – the overhang is fastened in place instead of trimmed, and your combo is kept (it removes damage-free).",
    "basis": "Holds up to ½ lb per sq. in. on clean receptive surfaces"
   }
  }

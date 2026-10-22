@@ -31,6 +31,7 @@ async function tapCanvas(p, touch) {
   if (touch) await p.touchscreen.tap(x, y); else await p.mouse.click(x, y);
 }
 async function placeAndTap(p, touch, off, product) {
+  await p.evaluate(() => window.__fbs.finishExtrusion()); 
   await p.evaluate(([off, product]) => { const f = window.__fbs; if (product) f.setProduct(product); f.freeze(); const S = f.S; f.setMovingX(S.stack[S.stack.length - 1].x + off); }, [off, product || null]);
   await tapCanvas(p, touch);
   await p.waitForTimeout(30);
@@ -59,6 +60,16 @@ async function suite(browserType, deviceName, tag) {
   ok(T('start: no overflow'), await noOverflow(p));
   ok(T('start: buttons on screen'), (await offscreen(p)).length === 0, await offscreen(p));
 
+  // --- duplicate audit (content) ---
+  const STOP = new Set('a an the and or of for to in on with by is it its at as that this from per your you can be are into'.split(' '));
+  const toks = s => s.toLowerCase().replace(/[®™“”"'’,.:;()–—-]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !STOP.has(w));
+  const grams = (s, n) => { const w = toks(s), g = new Set(); for (let i = 0; i + n <= w.length; i++) g.add(w.slice(i, i + n).join(' ')); return g; };
+  const jac = (a, b) => { const A = new Set(toks(a)), B = new Set(toks(b)); let i = 0; for (const x of A) if (B.has(x)) i++; return i / (A.size + B.size - i || 1); };
+  const allB = await p.evaluate(() => window.__fbs.products.map(x => ({ id: x.id, b: x.blurb }))), allF = await p.evaluate(() => window.__fbs.facts.map(f => f.text));
+  const bbDup = []; for (let i = 0; i < allB.length; i++) for (let j = i + 1; j < allB.length; j++) { const gi = grams(allB[i].b, 3), gj = grams(allB[j].b, 3); const sh = [...gi].filter(x => gj.has(x)); if (sh.length || jac(allB[i].b, allB[j].b) > 0.3) bbDup.push([allB[i].id, allB[j].id, sh, jac(allB[i].b, allB[j].b).toFixed(2)]); }
+  ok(T('no two product blurbs share near-identical wording'), bbDup.length === 0, bbDup);
+  const bfDup = []; for (const x of allB) for (const f of allF) { const gi = grams(x.b, 2), gf = grams(f, 2); const sh = [...gi].filter(g => gf.has(g)); if (sh.length || jac(x.b, f) > 0.2) bfDup.push([x.id, f, sh]); }
+  ok(T('company facts never restate a product blurb'), bfDup.length === 0, bfDup);
   // --- legal ---
   const SHORT = 'Demo for entertainment purposes only. Gilman Brothers and product names are trademarks of The Gilman Brothers Company.';
   ok(T('short legal line on start screen'), (await p.textContent('#start .legal-short')).trim() === SHORT && await p.isVisible('#start .legal-short'));
@@ -76,12 +87,12 @@ async function suite(browserType, deviceName, tag) {
   const fitCheck = (sel) => p.evaluate(sel => { const el = document.querySelector(sel); const r = el.getBoundingClientRect(); return { ok: el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1 && r.left >= -1 && r.right <= innerWidth + 1 && r.top >= -1 && r.bottom <= innerHeight + 1, sh: el.scrollHeight, ch: el.clientHeight, id: el.dataset.id }; }, sel);
   const blurbs = await p.evaluate(() => window.__fbs.products.map(x => x.blurb));
   ok(T('all 16 products have a unique 1–2 line blurb'), blurbs.length === CAT.products.length && blurbs.every(b => b && b.length >= 40 && b.length <= 130) && new Set(blurbs).size === blurbs.length);
-  ok(T('start spotlight visible with blurb + fact'), await p.isVisible('#spotStart') && (await p.textContent('#spotStart')).includes('Product spotlight') && !!(await p.getAttribute('#spotStart', 'data-fact')));
+  ok(T('start: product trivia on top, company fact below'), await p.isVisible('#spotStart') && (await p.textContent('#spotStart')).includes('Product spotlight') && !(await p.getAttribute('#spotStart', 'data-fact')) && !!(await p.getAttribute('#factStart', 'data-fact')) && await p.evaluate(() => document.getElementById('spotStart').getBoundingClientRect().bottom < document.getElementById('btnPlay').getBoundingClientRect().top && document.getElementById('factStart').getBoundingClientRect().top > document.getElementById('btnPlay').getBoundingClientRect().bottom));
   const facts = await p.evaluate(() => window.__fbs.facts);
   ok(T(`company facts (${facts.length}) each have a gilmanbrothers.com source URL`), facts.length >= 12 && facts.every(f => /^https:\/\/gilmanbrothers\.com\//.test(f.source) && f.text.length > 20) && new Set(facts.map(f => f.id)).size === facts.length);
   const dur = await p.evaluate(() => window.__fbs.products.map(x => ({ id: x.id, d: window.__fbs.spot.durationFor(x), w: (x.name + ' ' + x.blurb).split(/\s+/).length })));
   ok(T('read time: >=7s and 250ms/word + 2s for every blurb'), dur.every(x => x.d >= 7000 && x.d === Math.max(7000, 2000 + 250 * x.w) && x.d <= 13000), dur);
-  const cyc = await p.evaluate(() => { const sp = window.__fbs.spot, out = []; for (let k = 0; k < 64; k++) { sp.next(); out.push({ id: sp.id, fact: sp.fact, card: document.getElementById('spotStart').dataset.id, cardFact: document.getElementById('spotStart').dataset.fact, bar: document.getElementById('factBar').dataset.fact }); } return out; });
+  const cyc = await p.evaluate(() => { const sp = window.__fbs.spot, out = []; for (let k = 0; k < 64; k++) { sp.next(); out.push({ id: sp.id, fact: sp.fact, card: document.getElementById('spotStart').dataset.id, cardFact: document.getElementById('factStart').dataset.fact, overFact: document.getElementById('factOver').dataset.fact, ticker: document.getElementById('spotTicker').dataset.id, bar: document.getElementById('factBar').dataset.fact }); } return out; });
   const bagStart = await p.evaluate(() => window.__fbs.spot.bags().p.pos);
   const ids = cyc.map(c => c.id);
   // find cycle boundaries from the bag position: check every 16-window aligned to the bag covers all products
@@ -90,11 +101,11 @@ async function suite(browserType, deviceName, tag) {
   ok(T('shuffle-bag shows all 16 before any repeat'), aligned.length >= 3 && aligned.every(n => n === 16), { aligned, bagStart });
   ok(T('no product back-to-back (incl. across reshuffles)'), ids.every((id, k) => k === 0 || id !== ids[k - 1]));
   ok(T('order is randomized (not catalog order)'), ids.slice(0, 16).join() !== (await p.evaluate(() => window.__fbs.products.map(x => x.id).join())));
-  ok(T('fact changes in sync with the blurb'), cyc.every((c, k) => c.card === c.id && c.cardFact === c.fact && c.bar === c.fact && (k === 0 || c.fact !== cyc[k - 1].fact)));
+  ok(T('fact changes in sync with the blurb'), cyc.every((c, k) => c.card === c.id && c.ticker === c.id && c.cardFact === c.fact && c.overFact === c.fact && c.bar === c.fact && (k === 0 || c.fact !== cyc[k - 1].fact)));
   const fids = cyc.map(c => c.fact);
   ok(T('facts shuffle-bag covers every fact'), new Set(fids.slice(0, 2 * facts.length > 64 ? 64 : 2 * facts.length)).size === facts.length);
   const startFit = [];
-  for (let k = 0; k < 16; k++) { await p.evaluate(() => window.__fbs.spot.next()); const f = await fitCheck('#spotStart'); if (!f.ok) startFit.push(f); }
+  for (let k = 0; k < 16; k++) { await p.evaluate(() => window.__fbs.spot.next()); for (const sel of ['#spotStart', '#factStart']) { const f = await fitCheck(sel); if (!f.ok) startFit.push({ sel, ...f }); } }
   ok(T('every blurb + fact fits the start spotlight'), startFit.length === 0, startFit);
   ok(T('start (with spotlight) buttons on screen'), (await offscreen(p)).length === 0 && await noOverflow(p), await offscreen(p));
   if (tag === 'iphone15' || tag === 'iphoneSE') { await p.screenshot({ path: `${SHOTS}/${tag === 'iphone15' ? 'iphone15' : 'iphonese'}-start.png` }); await p.locator('#spotStart').screenshot({ path: `${SHOTS}/${tag === 'iphone15' ? 'iphone15' : 'iphonese'}-start-spotlight.png` }); }
@@ -139,8 +150,64 @@ async function suite(browserType, deviceName, tag) {
   await p.click('#btnPlay'); await p.waitForTimeout(200);
   ok(T('HUD visible during play'), await p.isVisible('#hud') && await p.isVisible('#btnPause'));
   ok(T('gameplay ticker shows same spotlight position'), await p.isVisible('#spotTicker') && (await p.getAttribute('#spotTicker', 'data-id')) === spotBefore);
+  const lay3 = await p.evaluate(() => { const S = window.__fbs.S, r = S.palletRect, hr = S.hostRects, tk = document.getElementById('spotTicker').getBoundingClientRect(), fb = document.getElementById('bottomBar').getBoundingClientRect(), hud = document.getElementById('hud').getBoundingClientRect();
+    const palTop = r.y + window.__fbs.T.DEPTH_Y; return { palTop, mids: hr.map(h => h.y + h.h / 2), feet: hr.map(h => h.y + h.h), tickTop: tk.top, tickBottom: tk.bottom, scoreBottom: document.getElementById('best').getBoundingClientRect().bottom, barTop: fb.top, cam: S.cam }; });
+  ok(T('opening view: pallet top deck within 3px of the hosts\' vertical midpoint'), lay3.cam === 0 && lay3.mids.every(m => Math.abs(m - lay3.palTop) <= 3), lay3);
+  ok(T('gameplay: product trivia under the HUD at top, company fact in bottom bar below hosts\' feet'), lay3.tickTop >= lay3.scoreBottom && lay3.feet.every(f => f <= lay3.barTop) && lay3.tickBottom < lay3.palTop, lay3);
+  const dup = await p.evaluate(() => {
+    const vis = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !el.closest('[hidden]'); };
+    const sents = []; for (const el of document.querySelectorAll('#hud *, #bottomBar *, .screen:not([hidden]) *')) { if (el.children.length || !vis(el)) continue; for (const s of el.textContent.split(/[.–·]/).map(x => x.trim().toLowerCase()).filter(x => x.length > 18)) sents.push(s); }
+    const seen = new Set(), d = []; for (const s of sents) { if (seen.has(s)) d.push(s); seen.add(s); } return d;
+  });
+  ok(T('gameplay: no product fact shown twice on screen'), dup.length === 0, dup);
+  // gauge: rendered thickness / real gauge is one constant for every product and gauge
+  const gz = await p.evaluate(() => { const f = window.__fbs, S = f.S, out = [];
+    for (const pr of f.products) for (const g of pr.gauges) { f.setProduct(pr.id, g.label); out.push({ id: pr.id, g: g.label, inches: g.inches, t: S.moving.t, r: S.moving.t / g.inches, stencil: S.lineName }); }
+    const landed = S.stack.filter(b => !b.base).map(b => b.t / b.gauge.inches); return { out, landed, ppi: S.ppi, hh: f.geo().hh }; });
+  const r0 = gz.out[0].r, byIn = {}; for (const o of gz.out) (byIn[o.inches] = byIn[o.inches] || new Set()).add(o.t);
+  const sortedIn = Object.keys(byIn).map(Number).sort((a, b) => a - b);
+  ok(T(`gauge: thickness ÷ gauge constant for all ${gz.out.length} product/gauge pairs (${r0.toFixed(2)} px/in)`), gz.out.every(o => Math.abs(o.r - r0) < 1e-9) && gz.landed.every(x => Math.abs(x - r0) < 1e-9) && sortedIn.every((v, i) => i === 0 || [...byIn[v]][0] > [...byIn[sortedIn[i - 1]]][0]), { r0, bad: gz.out.filter(o => Math.abs(o.r - r0) > 1e-9) });
+  ok(T('gauge: 3/16" ≈ 3–4px and 1" ≈ 16–20px (iPhone 15) and every board shows its gauge on the extruder'), (tag !== 'iphone15' || (Math.abs(r0 * 3 / 16 - 3.5) <= 0.5 && r0 >= 16 && r0 <= 20)) && gz.out.every(o => o.stencil.endsWith(' · ' + o.g)), { r0, at316: r0 * 3 / 16 });
+  const camOk = await p.evaluate(() => { const S = window.__fbs.S, tp = S.stack[S.stack.length - 1], sum = S.stack.reduce((a, b) => a + b.t, 0); return Math.abs(tp.y + tp.t - sum) < 1e-6; });
+  ok(T('stack height (camera input) is the sum of real board thicknesses'), camOk);
+  // Perfect: Evan says "Excellent", Cyrus says "Good job", both at once, cheering, bubbles on screen and apart
+  await p.evaluate(() => window.__fbs.finishExtrusion());
+  await p.evaluate(() => { const f = window.__fbs, S = f.S; for (const h of S.hostState) h.bubble = null; S.bubbleRects = {}; f.freeze(); f.setMovingX(S.stack[S.stack.length - 1].x); f.drop(); });
+  await p.waitForTimeout(120);
+  const pb = await p.evaluate(() => { const S = window.__fbs.S, hs = S.hostState, r = S.bubbleRects || {}, tp = S.stack[S.stack.length - 1];
+    return { hosts: window.FBS_CONFIG.HOSTS.map(h => h.short), t0: hs[0].bubble && hs[0].bubble.text, t1: hs[1].bubble && hs[1].bubble.text, a0: hs[0].anim, a1: hs[1].anim, L: r.left, R: r.right, W: innerWidth, H: innerHeight, stL: tp.x, stR: tp.x + tp.w + window.__fbs.T.DEPTH_X, stTop: S.stackTopY, perfect: S.perfects }; });
+  const inScr = b => b && b.x >= 0 && b.y >= 0 && b.x + b.w <= pb.W && b.y + b.h <= pb.H;
+  ok(T('Perfect: Evan says "Excellent" and Cyrus says "Good job" together, both cheering'), pb.perfect >= 1 && pb.hosts[0] === 'Evan' && pb.hosts[1] === 'Cyrus' && pb.t0 === 'Excellent' && pb.t1 === 'Good job' && pb.a0 === 'cheer' && pb.a1 === 'cheer' && pb.L && pb.L.text === 'Excellent' && pb.R && pb.R.text === 'Good job', pb);
+  ok(T('Perfect bubbles on screen, not overlapping each other or the stack'), inScr(pb.L) && inScr(pb.R) && pb.L.x + pb.L.w <= pb.R.x && [pb.L, pb.R].every(b => !(b.x < pb.stR && b.x + b.w > pb.stL && b.y + b.h > pb.stTop)), pb);
+  // ADHERE™: a fastener power-up, not a board
+  const perfectDrop = () => p.evaluate(async () => { const f = window.__fbs; await f.finishExtrusion(); const S = f.S; f.freeze(); f.setMovingX(S.stack[S.stack.length - 1].x); f.drop(); });
+  const ad0 = await p.evaluate(() => { const f = window.__fbs; return { all: f.products.length, boards: f.boards.length, inBoards: f.boards.some(b => b.id === 'adhere'), kind: f.products.find(x => x.id === 'adhere').kind, stackHas: f.S.stack.some(b => b.p && b.p.id === 'adhere') }; });
+  ok(T('ADHERE™ is an accessory: 16 products, 15 boards, never in the board pool'), ad0.all === 16 && ad0.boards === 15 && !ad0.inBoards && ad0.kind === 'accessory' && !ad0.stackHas, ad0);
+  await p.evaluate(() => { const S = window.__fbs.S; S.perfStreak = 0; S.adhere = 0; S.adhereArmed = false; S.rain = 0; S.heatNext = false; });
+  for (let k = 0; k < 3; k++) await perfectDrop();
+  const ad1 = await p.evaluate(() => { const S = window.__fbs.S, b = document.getElementById('btnAdhere'), r = b.getBoundingClientRect(); return { n: S.adhere, streak: S.perfStreak, coll: window.__fbs.collection().includes('adhere'), vis: !b.hidden && r.width >= 44 && r.height >= 44, cnt: document.getElementById('adhereCount').textContent, pop: document.getElementById('deckBlurb').textContent, rect: { x: r.x, y: r.y, w: r.width, h: r.height } }; });
+  ok(T('ADHERE™ earned after 3 Perfects in a row; ≥44pt button with count; pop-up text'), ad1.n === 1 && ad1.coll && ad1.vis && ad1.cnt === '1' && ad1.pop.includes('ADHERE™ — holds up to ½ lb/sq in, removes damage-free'), ad1);
+  const adBlock = await p.evaluate(() => { const r = document.getElementById('btnAdhere').getBoundingClientRect(), pr = window.__fbs.S.palletRect; return r.bottom < pr.y - 40; });
+  ok(T('ADHERE™ button sits in the HUD, clear of the stack'), adBlock);
+  const capN = await p.evaluate(() => { const f = window.__fbs; f.earnAdhere(); f.earnAdhere(); f.earnAdhere(); return f.S.adhere; });
+  ok(T('ADHERE™ cap is 2'), capN === 2, capN);
+  const ad2 = await p.evaluate(async () => { const f = window.__fbs; await f.finishExtrusion(); const S = f.S; S.rain = 0; S.combo = 3; f.toggleAdhere(); const armed = S.adhereArmed; f.freeze(); const tp = S.stack[S.stack.length - 1], off = Math.round(tp.w * 0.2); f.setMovingX(tp.x + off); const w0 = S.moving.w, x0 = S.moving.x, id = S.moving.p.id;
+    f.drop(); const b = S.stack[S.stack.length - 1]; return { armed, w0, x0, w: b.w, x: b.x, adhered: !!b.adhered, n: S.adhere, combo: S.combo, armedAfter: S.adhereArmed, falling: S.falling.length, id }; });
+  ok(T('armed ADHERE™ drop: overhang held (not trimmed), tabs drawn, combo kept, one used'), ad2.armed && ad2.w === ad2.w0 && ad2.x === ad2.x0 && ad2.adhered && ad2.n === 1 && ad2.combo >= 3 && !ad2.armedAfter, ad2);
   ok(T('fact bar shows same fact as start screen'), await p.isVisible('#factBar') && (await p.getAttribute('#factBar', 'data-fact')) === factBefore);
-  ok(T('extrusion pop-up shows the name only and does not advance rotation'), await p.isVisible('#deckBlurb') && (await p.textContent('#deckBlurb')).startsWith('Off the line') && (await p.evaluate(() => window.__fbs.spot.id)) === spotBefore);
+  // --- pallet + extrusion line ---
+  const ex0 = await p.evaluate(() => { const S = window.__fbs.S, m = S.moving; return { extruding: !!m.extrude, name: S.lineName, pname: m.p.name, n: S.stack.length }; });
+  ok(T('new board starts on the extrusion line, name stencilled on the extruder'), ex0.extruding && ex0.name.startsWith(ex0.pname + ' · ') && /"$/.test(ex0.name), ex0);
+  await tapCanvas(p, touch);
+  ok(T('board cannot be dropped while still on the extrusion line'), (await p.evaluate(() => window.__fbs.S.stack.length)) === ex0.n);
+  await p.evaluate(() => window.__fbs.finishExtrusion());
+  const ex1 = await p.evaluate(() => { const S = window.__fbs.S; return { log: S.extrudeLog, x: S.moving.x, die: window.__fbs.T.DIE_X, extr: S.moving.extruded, rotation: window.__fbs.spot.id }; });
+  ok(T('extrusion (push + cut) completes within 0.4 s sim / 0.5 s wall'), ex1.log.length >= 1 && ex1.log.every(e => e.sim <= 0.4 && e.ms <= 500) && ex1.extr, ex1.log);
+  ok(T('extrusion does not interrupt the spotlight rotation'), ex1.rotation === spotBefore);
+  const pal = await p.evaluate(() => { const S = window.__fbs.S, r = S.palletRect, c = document.getElementById('game'), x2 = c.getContext('2d'), dpr = c.width / innerWidth;
+    const px = x2.getImageData(Math.round((r.x + r.w * 0.25) * dpr), Math.round((r.y + r.h - 3) * dpr), 1, 1).data; const bb = document.getElementById('bottomBar').getBoundingClientRect();
+    return { r, px: [...px], barTop: bb.top, base: S.stack[0].base, firstOnPallet: S.stack[1] ? S.stack[1].y === S.stack[0].t : null }; });
+  ok(T('wooden pallet renders (wood-coloured pixels) above the bottom bars'), pal.base && pal.px[0] > pal.px[1] && pal.px[1] > pal.px[2] && pal.px[0] > 120 && pal.r.y + pal.r.h <= pal.barTop, pal);
   const tickFont = await p.evaluate(() => parseFloat(getComputedStyle(document.getElementById('spotTicker')).fontSize));
   ok(T('gameplay ticker font >= 15'), tickFont >= 15, tickFont);
   const tickFit = [];
@@ -155,10 +222,11 @@ async function suite(browserType, deviceName, tag) {
   await placeAndTap(p, touch, 30, 'insite-reveal');
   const after = await p.evaluate(() => { const S = window.__fbs.S; const a = S.stack[S.stack.length - 2], b = S.stack[S.stack.length - 1]; return { n: S.stack.length, w: b.w, pw: a.w, x: b.x, px: a.x, falling: S.falling.length, combo: S.combo }; });
   ok(T('a tap drops a board'), after.n === before + 1, after);
+  ok(T('first board lands on the pallet'), await p.evaluate(() => { const S = window.__fbs.S; return S.stack[0].base && S.stack[1].y === S.stack[0].t; }));
   ok(T('trim in game: width reduced by offset, piece falls'), Math.abs(after.w - (after.pw - 30)) < 0.01 && Math.abs(after.x - (after.px + 30)) < 0.01 && after.falling === 1, after);
   await placeAndTap(p, touch, -2, 'insite-reveal');
   const perf = await p.evaluate(() => { const S = window.__fbs.S; const a = S.stack[S.stack.length - 2], b = S.stack[S.stack.length - 1]; return { combo: S.combo, x: b.x, px: a.x, w: b.w, pw: a.w, perfects: S.perfects, parts: S.parts.length }; });
-  ok(T('perfect drop detected + snapped + particles'), perf.combo === 1 && perf.perfects === 1 && perf.x === perf.px && perf.w === perf.pw && perf.parts > 0, perf);
+  ok(T('perfect drop detected + snapped + particles'), perf.combo === 1 && perf.perfects >= 1 && perf.x === perf.px && perf.w === perf.pw && perf.parts > 0, perf);
   // trait checks in-game
   await placeAndTap(p, touch, 10, 'insite-psa');
   const st = await p.evaluate(() => { const S = window.__fbs.S; const a = S.stack[S.stack.length - 2], b = S.stack[S.stack.length - 1]; return { w: b.w, pw: a.w }; });
@@ -172,7 +240,7 @@ async function suite(browserType, deviceName, tag) {
   const coll = await p.evaluate(() => window.__fbs.collection());
   ok(T('stacked boards unlock in collection'), ['insite-reveal', 'insite-psa', 'ryno-board', 'resilient-mount'].every(id => coll.includes(id)), coll);
   // Gilco bounce back
-  await p.evaluate(() => { const f = window.__fbs; f.setProduct('gilco-styrene'); f.freeze(); f.setMovingX(-500); });
+  await p.evaluate(() => window.__fbs.finishExtrusion()); await p.evaluate(() => { const f = window.__fbs; f.setProduct('gilco-styrene'); f.freeze(); f.setMovingX(-500); });
   await tapCanvas(p, touch); await p.waitForTimeout(30);
   ok(T('Gilco Styrene bounces back once on a miss'), await p.evaluate(() => window.__fbs.S.mode === 'play' && window.__fbs.S.moving.retry === true));
   // pause / resume
@@ -187,24 +255,29 @@ async function suite(browserType, deviceName, tag) {
   ok(T('resume'), (await p.evaluate(() => window.__fbs.S.mode)) === 'play');
   // natural play for a gameplay screenshot: near-perfect drops with moving board in motion
   for (let i = 0; i < 9; i++) {
-    await p.evaluate(i => { const f = window.__fbs, S = f.S; const t = S.stack[S.stack.length - 1]; f.setMovingX(t.x + (i % 3 === 2 ? 9 : 1)); }, i);
+    await p.evaluate(() => window.__fbs.finishExtrusion()); await p.evaluate(i => { const f = window.__fbs, S = f.S; const t = S.stack[S.stack.length - 1]; f.setMovingX(t.x + (i % 3 === 2 ? 9 : 1)); }, i);
     await tapCanvas(p, touch); await p.waitForTimeout(140);
   }
-  await p.evaluate(() => { const f = window.__fbs, S = f.S; f.setMovingX(S.stack[S.stack.length - 1].x + 1); });
+  await p.evaluate(() => window.__fbs.finishExtrusion()); await p.evaluate(() => { const f = window.__fbs, S = f.S; f.setMovingX(S.stack[S.stack.length - 1].x + 1); });
   await tapCanvas(p, touch); await p.waitForTimeout(160);
   const gs = await p.evaluate(() => ({ h: window.__fbs.S.height, score: window.__fbs.S.score, txt: document.getElementById('score').textContent }));
+  ok(T('every landed board passed through the extrusion line'), await p.evaluate(() => window.__fbs.S.stack.slice(1).every(b => b.extruded === true) && window.__fbs.S.extrudeLog.every(e => e.sim <= 0.4 && e.ms <= 500)), await p.evaluate(() => window.__fbs.S.extrudeLog.map(e => Math.round(e.ms))));
   ok(T('score HUD updates'), gs.txt === String(gs.score) && gs.h >= 14, gs);
   ok(T('play: no overflow'), await noOverflow(p));
-  const shotName = { iphone15: 'iphone15-gameplay', iphoneSE: 'iphonese-gameplay', chromium: 'chromium-gameplay', pixel7: 'v2-android-pixel7-gameplay', galaxyS8: 'v2-android-galaxys8-gameplay' }[tag];
-  await p.screenshot({ path: `${SHOTS}/${shotName}.png` });
+  const shotName = { iphone15: 'iphone15-gameplay', iphoneSE: 'iphonese-gameplay', chromium: 'chromium-gameplay', pixel7: 'v3-android-pixel7-gameplay', galaxyS8: 'v3-android-galaxys8-gameplay' }[tag];
+  await p.screenshot({ path: `${SHOTS}/${shotName}.png` }); if (tag === 'iphone15') await p.screenshot({ path: `${SHOTS}/v3-iphone15-gameplay.png` });
   // game over
   const score = await p.evaluate(() => window.__fbs.S.score);
-  await p.evaluate(() => { const f = window.__fbs; f.setProduct('infinity'); f.freeze(); f.setMovingX(-900); });
-  await tapCanvas(p, touch); await p.waitForTimeout(1400);
+  await p.evaluate(() => window.__fbs.finishExtrusion()); await p.evaluate(() => { const f = window.__fbs; f.setProduct('infinity'); f.freeze(); f.setMovingX(-900); });
+  await p.evaluate(() => { window.__fbs.S.adhere = Math.max(1, window.__fbs.S.adhere); window.__fbs.S.rescueUsed = false; });
+  await tapCanvas(p, touch); await p.waitForTimeout(80);
+  const rs = await p.evaluate(() => ({ vis: !document.getElementById('rescue').hidden, txt: document.getElementById('rescue').textContent, mode: window.__fbs.S.mode }));
+  ok(T('complete miss with ADHERE™ in hand offers "Use ADHERE™ to save it?" once'), rs.vis && rs.txt.includes('Use ADHERE™ to save it?') && rs.mode === 'rescue', rs);
+  await p.click('#btnRescueNo'); await p.waitForTimeout(1400);
   ok(T('game over triggers on complete miss'), await p.isVisible('#over') && (await p.evaluate(() => window.__fbs.S.mode)) === 'over');
   ok(T('game over shows score + Great stack + hosts'), (await p.textContent('#finalScore')) === String(score) && (await p.textContent('#over h2')).includes('Great stack') && (await p.$$('#overHosts canvas')).length === 2);
   const overFit = [];
-  for (let k = 0; k < 16; k++) { await p.evaluate(() => window.__fbs.spot.next()); const f = await fitCheck('#spotOver'); if (!f.ok) overFit.push(f); }
+  for (let k = 0; k < 16; k++) { await p.evaluate(() => window.__fbs.spot.next()); for (const sel of ['#spotOver', '#factOver']) { const f = await fitCheck(sel); if (!f.ok) overFit.push({ sel, ...f }); } }
   ok(T('every blurb fits the game-over spotlight'), overFit.length === 0 && await p.isVisible('#spotOver'), overFit);
   ok(T('short legal line on game over'), await p.isVisible('#over .legal-short'));
   ok(T('over: tap targets'), (await smallTargets(p)).length === 0, await smallTargets(p));
@@ -214,6 +287,9 @@ async function suite(browserType, deviceName, tag) {
   await p.click('#btnCollOver'); await p.waitForTimeout(150);
   const cards = await p.$$eval('#cards .card', cs => cs.map(c => ({ id: c.dataset.id, locked: c.classList.contains('locked'), trait: c.querySelector('.trait').textContent })));
   ok(T('collection lists all products'), cards.length === CAT.products.length);
+  const accCard = await p.evaluate(() => { const c = document.querySelector('#cards .card[data-id="adhere"]'), hs = [...document.querySelectorAll('#cards .coll-h')].map(h => h.textContent), all = [...document.querySelectorAll('#cards > *')];
+    return c && { kind: c.dataset.kind, locked: c.classList.contains('locked'), txt: c.textContent, heads: hs, afterBoards: all.indexOf(c) > all.findIndex(e => e.textContent === 'Accessory') && all.filter(e => e.matches('.card[data-kind=board]')).every(e => all.indexOf(e) < all.indexOf(c)) }; });
+  ok(T('ADHERE™ has its own unlocked Accessory card, separate from the 15 boards'), accCard && accCard.kind === 'accessory' && !accCard.locked && accCard.heads.length === 2 && accCard.heads[1] === 'Accessory' && accCard.afterBoards && accCard.txt.includes('½ lb') && accCard.txt.includes('Power-up'), accCard);
   ok(T('unlocked cards show trait, locked hidden'), cards.filter(c => !c.locked).every(c => !c.trait.includes('🔒')) && cards.filter(c => c.locked).every(c => c.trait.includes('🔒')) && cards.some(c => !c.locked));
   ok(T('collection: no horizontal overflow'), await p.evaluate(() => { const c = document.getElementById('coll'); return c.scrollWidth <= c.clientWidth + 1; }) && await noOverflow(p));
   ok(T('collection: tap targets'), (await smallTargets(p)).length === 0, await smallTargets(p));
@@ -255,7 +331,7 @@ async function suite(browserType, deviceName, tag) {
   if (browserType === 'chromium') {
     await p.goto(BASE); await p.waitForTimeout(1500);
     const sw = await p.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); return { reg: !!r, caches: await caches.keys() }; });
-    ok(T('service worker registered with fbs-v2 cache'), sw.reg && sw.caches.includes('fbs-v2'), sw);
+    ok(T('service worker registered with fbs-v3 cache'), sw.reg && sw.caches.includes('fbs-v3'), sw);
   }
   if (tag === 'pixel7' || tag === 'galaxyS8') {
     await p.goto(BASE + '?nospot'); await p.waitForTimeout(400);

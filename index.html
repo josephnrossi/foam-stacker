@@ -35,19 +35,23 @@
   <button id="btnMute" class="icon-btn" aria-label="Mute sound">🔊</button>
   <div class="scorebox"><div id="score" aria-live="polite">0</div><div id="best">Best 0</div></div>
   <button id="btnPause" class="icon-btn" aria-label="Pause">❚❚</button>
+  <button id="btnAdhere" class="icon-btn adhere-btn" aria-label="ADHERE fastener" hidden><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3" fill="#eef0f3"/><rect x="3" y="5" width="18" height="4" rx="2" fill="#c9ced8"/><circle cx="8" cy="13" r="1.6" fill="#9aa3b7"/><circle cx="12" cy="13" r="1.6" fill="#9aa3b7"/><circle cx="16" cy="13" r="1.6" fill="#9aa3b7"/></svg><span class="cnt" id="adhereCount">0</span></button>
   <div id="nowBoard" aria-live="polite"></div>
   <div id="deckBlurb" hidden></div>
+  <div id="spotTicker" class="spot ticker" aria-live="off"></div>
 </div>
-<div id="bottomBar" hidden><div id="spotTicker" class="spot ticker" aria-live="off"></div><div id="factBar" class="fact"></div></div>
+<div id="rescue" class="modal" hidden role="dialog" aria-label="Use ADHERE"><p>Use <b>ADHERE™</b> to save it?</p><div class="row"><button id="btnRescueYes" class="btn primary">Use it</button><button id="btnRescueNo" class="btn">No</button></div></div>
+<div id="bottomBar" hidden><div id="factBar" class="fact"></div></div>
 
 <section id="start" class="screen">
+  <div id="spotStart" class="spot card-spot" aria-live="polite"></div>
   <img class="brand-logo" id="startLogo" alt="">
   <h1>Foam Board<br><span>Stacker</span></h1>
   <div class="hosts" id="startHosts"></div>
   <p class="lead">Tap to drop each board. Overhangs get trimmed. Line them up for a <b>Perfect</b>!</p>
-  <div id="spotStart" class="spot card-spot" aria-live="polite"></div>
   <button id="btnPlay" class="btn primary">Play</button>
   <button id="btnCollStart" class="btn">Board Collection <span class="cnt" id="collCountStart"></span></button>
+  <div id="factStart" class="fact fact-card"></div>
   <p class="foot"><span class="demo">Demo</span> <span id="footBrand"></span> · <button id="btnLegalStart" class="link-btn">Legal</button></p>
   <p class="legal-short">Demo for entertainment purposes only. Gilman Brothers and product names are trademarks of The Gilman Brothers Company.</p>
 </section>
@@ -63,14 +67,15 @@
 </section>
 
 <section id="over" class="screen" hidden>
+  <div id="spotOver" class="spot card-spot" aria-live="polite"></div>
   <img class="brand-logo small" id="overLogo" alt="">
   <h2>Great stack!</h2>
   <div class="hosts small" id="overHosts"></div>
   <div class="final"><div class="lbl">Score</div><div id="finalScore">0</div><div id="finalMeta"></div><div id="newBest" hidden>New best!</div></div>
   <div id="unlockNote"></div>
-  <div id="spotOver" class="spot card-spot" aria-live="polite"></div>
   <button id="btnRetry" class="btn primary">Retry</button>
   <div class="row"><button id="btnCollOver" class="btn">Collection</button><button id="btnHome2" class="btn">Home</button></div>
+  <div id="factOver" class="fact fact-card"></div>
   <p class="legal-short">Demo for entertainment purposes only. Gilman Brothers and product names are trademarks of The Gilman Brothers Company.</p>
 </section>
 
