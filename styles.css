@@ -132,3 +132,15 @@ h2{margin:0;font-size:28px;font-weight:800}
 #billBanner .bar{margin-top:5px;height:6px;border-radius:3px;background:#10131b55;overflow:hidden}
 #billBanner .bar i{display:block;height:100%;width:100%;background:#10131b;border-radius:3px}
 @keyframes billPop{from{transform:translateX(-50%) scale(.6);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+
+#hud .music-btn{grid-column:3;grid-row:2;margin-top:6px}
+.music-btn{position:relative;font-size:22px;font-weight:700}
+.music-btn.off{color:#9aa3b7}
+.music-btn.off::after{content:"";position:absolute;left:11px;right:11px;top:50%;height:2px;background:#ff6b6b;transform:rotate(-40deg);border-radius:2px}
+.icon-btn.off{background:#171a24aa}
+.foot-row{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:nowrap;max-width:94vw}
+.foot-row .foot{margin:0}
+.snd-row{display:flex;gap:6px;flex:none}
+.snd-row .icon-btn{width:44px;height:44px;font-size:17px}
+.foot-row .foot{white-space:nowrap}
+@media (max-width:430px){.foot-row #footBrand{display:none}}

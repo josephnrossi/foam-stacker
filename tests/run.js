@@ -49,6 +49,7 @@ async function suite(browserType, deviceName, tag) {
   const T = n => `${tag}: ${n}`;
 
   await p.goto(BASE + '?seed=7&nospot&nobill'); await p.waitForTimeout(600);
+  const au0 = await p.evaluate(() => ({ unlocked: window.FBS_AUDIO.state.unlocked, hasCtx: !!window.FBS_AUDIO.state.ctx }));
   ok(T('start screen visible'), await p.isVisible('#start'));
   ok(T('noindex meta'), (await p.getAttribute('meta[name=robots]', 'content') || '').includes('noindex'));
   ok(T('Demo label shown'), await p.isVisible('#start .demo'));
@@ -148,6 +149,9 @@ async function suite(browserType, deviceName, tag) {
 
   // --- gameplay ---
   await p.click('#btnPlay'); await p.waitForTimeout(200);
+  const au1 = await p.evaluate(async () => { const A = window.FBS_AUDIO; for (let i = 0; i < 20 && !A.running; i++) await new Promise(r => setTimeout(r, 50)); return { unlocked: A.state.unlocked, state: A.state.ctx && A.state.ctx.state, session: navigator.audioSession ? navigator.audioSession.type : 'unsupported', silentFallback: !navigator.audioSession }; });
+  ok(T('audio: locked before the first tap, unlocked + running after it'), !au0.unlocked && !au0.hasCtx && au1.unlocked && au1.state === 'running', { au0, au1 });
+  ok(T('audio: iOS audioSession set to "playback" where supported (silent <audio> fallback otherwise)'), au1.session === 'playback' || (au1.session === 'unsupported' && au1.silentFallback), au1);
   ok(T('HUD visible during play'), await p.isVisible('#hud') && await p.isVisible('#btnPause'));
   ok(T('gameplay ticker shows same spotlight position'), await p.isVisible('#spotTicker') && (await p.getAttribute('#spotTicker', 'data-id')) === spotBefore);
   const lay3 = await p.evaluate(() => { const S = window.__fbs.S, r = S.palletRect, hr = S.hostRects, tk = document.getElementById('spotTicker').getBoundingClientRect(), fb = document.getElementById('bottomBar').getBoundingClientRect(), hud = document.getElementById('hud').getBoundingClientRect();
@@ -221,6 +225,10 @@ async function suite(browserType, deviceName, tag) {
   ok(T('WIDWAW ends: Bill poofs out, Cyrus returns, speed restored exactly, next event 25–45 s away'), billAfter.bill === null && billAfter.slot === 'cyrus' && billAfter.boost === 1 && billAfter.banner && billAfter.next >= 24 && billAfter.next <= 45, billAfter);
   const pts1 = await p.evaluate(async () => { const f = window.__fbs, S = f.S; await f.finishExtrusion(); f.setProduct('insite-psa', '3/16"'); const sp = S.moving.speed; f.freeze(); S.moving.bonus = false; f.setMovingX(S.stack[S.stack.length - 1].x + 9); f.drop(); return { pts: S.lastPts, sp }; });
   ok(T('after WIDWAW: scoring back to 1×'), pts1.pts === 1, pts1);
+  await p.evaluate(() => { window.__fbs.S.rain = 3; }); await p.waitForTimeout(120);
+  const rOn = await p.evaluate(() => window.FBS_AUDIO.state.rain && window.FBS_AUDIO.state.log.includes('rainOn'));
+  await p.evaluate(() => { window.__fbs.S.rain = 0; }); await p.waitForTimeout(120);
+  ok(T('audio: rain loop starts in rain rounds and stops after'), rOn && await p.evaluate(() => !window.FBS_AUDIO.state.rain && window.FBS_AUDIO.state.log.includes('rainOff')));
   ok(T('fact bar shows same fact as start screen'), await p.isVisible('#factBar') && (await p.getAttribute('#factBar', 'data-fact')) === factBefore);
   // --- pallet + extrusion line ---
   const ex0 = await p.evaluate(() => { const S = window.__fbs.S, m = S.moving; return { extruding: !!m.extrude, name: S.lineName, pname: m.p.name, n: S.stack.length }; });
@@ -304,6 +312,10 @@ async function suite(browserType, deviceName, tag) {
   ok(T('complete miss with ADHERE™ in hand offers "Use ADHERE™ to save it?" once'), rs.vis && rs.txt.includes('Use ADHERE™ to save it?') && rs.mode === 'rescue', rs);
   await p.click('#btnRescueNo'); await p.waitForTimeout(1400);
   ok(T('game over triggers on complete miss'), await p.isVisible('#over') && (await p.evaluate(() => window.__fbs.S.mode)) === 'over');
+  const slog = await p.evaluate(() => [...new Set(window.FBS_AUDIO.state.log)]);
+  const needS = ['extrude', 'cut', 'drop', 'slice', 'fall', 'perfect', 'adhereEarn', 'adhereFasten', 'widwaw', 'billLeave', 'bonus', 'ui', 'rainOn', 'rainOff'];
+  ok(T('audio: every game event triggered its sound'), needS.every(n => slog.includes(n)) && (slog.includes('over') || slog.includes('newBest')), { missing: needS.filter(n => !slog.includes(n)), slog });
+  ok(T('audio: sound pack has every sound'), await p.evaluate(() => { const E = window.FBS_AUDIO.state.eng; return ['ui', 'extrude', 'cut', 'drop', 'slice', 'fall', 'perfect', 'cheer', 'grow', 'bonus', 'adhereEarn', 'adhereFasten', 'widwaw', 'billLeave', 'over', 'newBest'].every(n => E.sounds.includes(n)) && typeof E.bar === 'function'; }));
   ok(T('game over shows score + Great stack + hosts'), (await p.textContent('#finalScore')) === String(score) && (await p.textContent('#over h2')).includes('Great stack') && (await p.$$('#overHosts canvas')).length === 2);
   const overFit = [];
   for (let k = 0; k < 16; k++) { await p.evaluate(() => window.__fbs.spot.next()); for (const sel of ['#spotOver', '#factOver']) { const f = await fitCheck(sel); if (!f.ok) overFit.push({ sel, ...f }); } }
@@ -360,7 +372,7 @@ async function suite(browserType, deviceName, tag) {
   if (browserType === 'chromium') {
     await p.goto(BASE); await p.waitForTimeout(1500);
     const sw = await p.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); return { reg: !!r, caches: await caches.keys() }; });
-    ok(T('service worker registered with fbs-v4 cache'), sw.reg && sw.caches.includes('fbs-v4'), sw);
+    ok(T('service worker registered with fbs-v5 cache'), sw.reg && sw.caches.includes('fbs-v5'), sw);
   }
   if (tag === 'pixel7' || tag === 'galaxyS8') {
     await p.goto(BASE + '?nospot'); await p.waitForTimeout(400);
@@ -388,6 +400,18 @@ async function suite(browserType, deviceName, tag) {
       ok(T('Android: ~60fps with 4x CPU throttle'), fps.fps >= 55, fps);
     }
   }
+  // sound toggles persist
+  await p.goto(BASE + '?nospot&nobill'); await p.waitForTimeout(400);
+  await p.click('#btnMuteStart'); await p.click('#btnMusicStart'); await p.waitForTimeout(100);
+  const tg1 = await p.evaluate(() => ({ mute: localStorage.getItem('fbs.mute'), music: localStorage.getItem('fbs.music') }));
+  await p.reload(); await p.waitForTimeout(400);
+  const tg2 = await p.evaluate(() => ({ muted: window.FBS_AUDIO.state.muted, music: window.FBS_AUDIO.state.music, icon: document.getElementById('btnMute').textContent, icon2: document.getElementById('btnMuteStart').textContent, musicOff: document.getElementById('btnMusic').classList.contains('off') }));
+  ok(T('audio: mute persists across reload (🔇 shown)'), tg1.mute === 'true' && tg2.muted === true && tg2.icon === '🔇' && tg2.icon2 === '🔇', { tg1, tg2 });
+  ok(T('audio: music toggle (default off) persists across reload'), tg1.music === 'true' && tg2.music === true && !tg2.musicOff, { tg1, tg2 });
+  await p.click('#btnMuteStart'); await p.click('#btnMusicStart'); await p.waitForTimeout(100);
+  ok(T('audio: toggles switch back (sound on, music off)'), await p.evaluate(() => localStorage.getItem('fbs.mute') === 'false' && localStorage.getItem('fbs.music') === 'false' && !window.FBS_AUDIO.state.muted && !window.FBS_AUDIO.state.music));
+  const fresh = await (await p.context().browser().newContext()).newPage(); await fresh.goto(BASE + '?nospot'); await fresh.waitForTimeout(300);
+  ok(T('audio: music is off by default'), await fresh.evaluate(() => window.FBS_AUDIO.state.music === false && document.getElementById('btnMusicStart').classList.contains('off'))); await fresh.close();
   ok(T('no console/page errors'), errs.length === 0, errs);
   await b.close();
 }

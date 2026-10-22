@@ -4,7 +4,7 @@
   const CFG = window.FBS_CONFIG, PRODUCTS = window.FBS_PRODUCTS, SPR = window.FBS_SPRITES;
   const $ = id => document.getElementById(id);
   const cv = $('game'); let ctx = cv.getContext('2d');
-  const LS = { best: 'fbs.best', mute: 'fbs.mute', coll: 'fbs.collection' };
+  const LS = { best: 'fbs.best', mute: 'fbs.mute', music: 'fbs.music', coll: 'fbs.collection' };
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
@@ -45,32 +45,14 @@
     return res;
   }
 
-  // ---------- audio ----------
-  let actx = null, muted = store.get(LS.mute, false);
-  function ac() { if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } } if (actx && actx.state === 'suspended') actx.resume(); return actx; }
-  function tone(f, dur, type = 'sine', vol = 0.15, slide = 0, delay = 0) {
-    if (muted) return; const a = ac(); if (!a) return;
-    const t0 = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
-    o.type = type; o.frequency.setValueAtTime(f, t0); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), t0 + dur);
-    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + dur + 0.02);
-  }
-  function noise(dur, vol = 0.12, hp = 1800) {
-    if (muted) return; const a = ac(); if (!a) return;
-    const n = Math.floor(a.sampleRate * dur), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
-    const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain(); s.buffer = buf; f.type = 'highpass'; f.frequency.value = hp; g.gain.value = vol;
-    s.connect(f).connect(g).connect(a.destination); s.start();
-  }
+  // ---------- audio (synth engine in audio.js) ----------
+  const AU = window.FBS_AUDIO; let muted = store.get(LS.mute, false), musicOn = store.get(LS.music, false);
+  function ac() { return AU.unlock(); }
+  const P = name => (...a) => AU.play(name, ...a);
   const sfx = {
-    drop() { tone(150, 0.12, 'triangle', 0.22, -60); },
-    slice() { noise(0.12, 0.14, 2500); tone(520, 0.06, 'square', 0.04, -200); },
-    perfect(n) { const b = 520 * Math.pow(1.0595, Math.min(n, 14) * 2); tone(b, 0.16, 'sine', 0.16); tone(b * 1.5, 0.2, 'sine', 0.08, 0, 0.05); },
-    grow() { tone(660, 0.1, 'triangle', 0.1, 300); },
-    over() { tone(330, 0.25, 'sawtooth', 0.07, -180); tone(220, 0.4, 'sawtooth', 0.06, -120, 0.18); },
-    extrude() { tone(90, 0.22, 'sawtooth', 0.035, 40); },
-    cut() { noise(0.05, 0.12, 4000); tone(1400, 0.04, 'square', 0.03, -600); },
-    bonus() { [660, 880, 1100].forEach((f, i) => tone(f, 0.12, 'triangle', 0.1, 0, i * 0.07)); },
+    drop: P('drop'), slice: P('slice'), fall: P('fall'), perfect: P('perfect'), grow: P('grow'), over: P('over'), newBest: P('newBest'),
+    extrude: P('extrude'), cut: P('cut'), bonus: P('bonus'), adhereEarn: P('adhereEarn'), adhereFasten: P('adhereFasten'),
+    widwaw: P('widwaw'), billLeave: P('billLeave'), ui: P('ui'),
   };
   const buzz = ms => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
 
@@ -153,7 +135,7 @@
     m.extrude = { t: 0, start: performance.now(), cut: false }; m.x = T.DIE_X - w; // still inside the die
     S.moving = m; S.lineName = p.name + ' · ' + gauge.label; S.lineFlash = 0.6;
     if (S.quickBond > 0) S.quickBond--;
-    updateNowBoard(); sfx.extrude();
+    updateNowBoard(); sfx.extrude((T.EXTRUDE_PUSH + T.EXTRUDE_CUT) / boost());
   }
   function updateNowBoard() {
     const m = S && S.moving; const el = $('nowBoard');
@@ -177,13 +159,13 @@
         m.retry = true; m.dir = 1; m.x = T.DIE_X; host(0, 'cheer', 'One more try!'); sfx.grow(); buzz(15); return;
       }
       if (S.adhere > 0 && !S.rescueUsed) { offerRescue(); return; }
-      S.falling.push(mkPiece(m.x, m.w, m)); S.moving = null; sfx.over(); buzz([30, 40, 60]); S.shake = 8;
+      S.falling.push(mkPiece(m.x, m.w, m)); S.moving = null; sfx.fall(1.4); buzz([30, 40, 60]); S.shake = 8;
       S.mode = 'dying'; S.overT = 0.85; return;
     }
     // land
     const usedAdhere = armed && !r.perfect;
     const board = { adhered: usedAdhere ? { l: Math.max(r.x, tp.x), r: Math.min(r.x + r.w, tp.x + tp.w) } : null, x: r.x, w: r.w, y: tp.y + tp.t, t: m.t, gauge: m.gauge, p: m.p, look: m.look, landT: 0, extruded: m.extruded };
-    S.stack.push(board);
+    S.stack.push(board); sfx.drop(m.gauge ? m.gauge.inches : 0.1875, S.stack.length === 2); // foam thunk (lower for thicker), wood knock on the pallet
     let pts = id === 'heavy-duty' ? 2 : 1, floorsAdd = pts;
     if (r.perfect) {
       S.combo += id === 'archival' ? 2 : 1; S.perfects++;
@@ -196,8 +178,8 @@
       S.perfStreak++; if (S.perfStreak % ADHERE_EVERY === 0) S.earnNow = true;
     } else {
       S.perfStreak = 0;
-      if (usedAdhere) { S.adhereArmed = false; S.adhere--; updateAdhere(); sfx.grow(); }
-      if (r.stuck) { sfx.drop(); flash(board.x + (r.x > tp.x ? board.w : 0), board, '#7cf0a5'); }
+      if (usedAdhere) { S.adhereArmed = false; S.adhere--; updateAdhere(); sfx.adhereFasten(); }
+      if (r.stuck) { flash(board.x + (r.x > tp.x ? board.w : 0), board, '#7cf0a5'); }
       else { sliced(r, m, board); }
       if (r.wrapped) { S.combo++; host(1, 'cheer', 'Wrapped!'); }
       else if (id !== 'clean-cut' && !usedAdhere) S.combo = 0; // ADHERE™ is damage-free: combo kept
@@ -260,7 +242,7 @@
   function earnAdhere() {
     if (!collection.has('adhere')) { collection.add('adhere'); store.set(LS.coll, [...collection]); S.unlockedNow.push('adhere'); }
     if (S.adhere >= ADHERE_MAX) return;
-    S.adhere++; S.adhereLog = (S.adhereLog || 0) + 1; updateAdhere(); toast(ADHERE_POP, '📌 +1 '); sfx.grow(); buzz(10);
+    S.adhere++; S.adhereLog = (S.adhereLog || 0) + 1; updateAdhere(); toast(ADHERE_POP, '📌 +1 '); sfx.adhereEarn(); buzz(10);
   }
   function updateAdhere() {
     const b = $('btnAdhere'); if (!b) return; const n = S ? S.adhere : 0;
@@ -276,7 +258,7 @@
   }
   function rescue(yes) {
     if (!S || S.mode !== 'rescue') return; $('rescue').hidden = true; S.mode = 'play';
-    if (yes) { S.adhere--; S.adhereArmed = false; updateAdhere(); const m = S.moving; m.dir = 1; m.x = T.DIE_X; host(0, 'cheer', 'Fastened!'); toast(ADHERE_POP, '📌 '); sfx.grow(); buzz(15); }
+    if (yes) { S.adhere--; S.adhereArmed = false; updateAdhere(); const m = S.moving; m.dir = 1; m.x = T.DIE_X; host(0, 'cheer', 'Fastened!'); toast(ADHERE_POP, '📌 '); sfx.adhereFasten(); buzz(15); }
     else drop();
   }
 
@@ -288,12 +270,12 @@
     S.bill = { t: 0, dur: T.BILL_DUR, on: true, phase: 'in', outT: 0 }; S.billCount++;
     const h = S.hostState[1]; h.anim = 'cheer'; h.t = 1.4; h.bubble = { text: 'WIDWAW', t: 2.4 };
     const sl = hostSlot(); S.poofs.push({ x: sl.x, y: sl.y, t: 0 });
-    $('billBanner').hidden = false; updateBillBar(); sfx.bonus(); buzz([10, 30, 10]);
+    $('billBanner').hidden = false; updateBillBar(); sfx.widwaw(); AU.setFast(true); buzz([10, 30, 10]);
   }
   function endBill() {
     if (!S || !S.bill || !S.bill.on) return;
     S.bill.on = false; S.bill.phase = 'out'; S.bill.outT = 0; S.hostState[1].bubble = null; S.hostState[1].anim = 'idle';
-    const sl = hostSlot(); S.poofs.push({ x: sl.x, y: sl.y, t: 0 }); $('billBanner').hidden = true; sfx.grow();
+    const sl = hostSlot(); S.poofs.push({ x: sl.x, y: sl.y, t: 0 }); $('billBanner').hidden = true; sfx.billLeave(); AU.setFast(false);
   }
   function updateBill(dt) {
     const b = S.bill;
@@ -547,6 +529,7 @@
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
+    AU.setRain(!!S && S.mode === 'play' && S.rain > 0); AU.setMusicActive(!!S && (S.mode === 'play' || S.mode === 'rescue' || S.mode === 'dying'));
     if (!S || S.mode === 'play' || S.mode === 'dying') update(dt);
     else if (S.mode === 'over') update(dt * 0.5);
     render();
@@ -629,11 +612,11 @@
   const screens = ['start', 'pause', 'over', 'coll', 'legal'];
   function show(id) { for (const s of screens) $(s).hidden = s !== id; $('hud').hidden = !(S && (S.mode === 'play' || S.mode === 'dying' || S.mode === 'pause') && (id == null || id === 'pause')); $('bottomBar').hidden = $('hud').hidden; if ($('hud').hidden) $('deckBlurb').hidden = true; layoutBottom(); }
   let collReturn = 'start';
-  function start() { ac(); newGame(); $('score').textContent = '0'; $('best').textContent = 'Best ' + best(); show(null); $('rescue').hidden = true; $('billBanner').hidden = true; updateAdhere(); host(0, 'cheer', 'Let\u2019s stack!'); }
+  function start() { ac(); AU.setFast(false); newGame(); $('score').textContent = '0'; $('best').textContent = 'Best ' + best(); show(null); $('rescue').hidden = true; $('billBanner').hidden = true; updateAdhere(); host(0, 'cheer', 'Let\u2019s stack!'); }
   function pause() { if (!S || S.mode !== 'play') return; S.mode = 'pause'; show('pause'); }
   function resume() { if (!S || S.mode !== 'pause') return; S.mode = 'play'; last = performance.now(); show(null); }
   function gameOver() { $('rescue').hidden = true; $('billBanner').hidden = true;
-    S.mode = 'over'; const b = best(), nb = S.score > b; if (nb) store.set(LS.best, S.score);
+    S.mode = 'over'; const b = best(), nb = S.score > b; if (nb) store.set(LS.best, S.score); if (nb && b > 0) sfx.newBest(); else sfx.over();
     $('finalScore').textContent = S.score;
     $('finalMeta').textContent = `Height ${S.height} boards · ${S.perfects} perfect${S.perfects === 1 ? '' : 's'} · best ${Math.max(b, S.score)}`;
     $('newBest').hidden = !nb;
@@ -705,8 +688,10 @@
     if (e.code === 'KeyP' || e.code === 'Escape') { if (S && S.mode === 'play') pause(); else if (S && S.mode === 'pause') resume(); }
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
-  function setMute(v) { muted = v; store.set(LS.mute, v); $('btnMute').textContent = v ? '🔇' : '🔊'; $('btnMute').setAttribute('aria-label', v ? 'Unmute sound' : 'Mute sound'); }
-  $('btnMute').onclick = () => setMute(!muted);
+  function setMute(v) { muted = v; store.set(LS.mute, v); AU.setMuted(v); for (const id of ['btnMute', 'btnMuteStart']) { const b = $(id); if (!b) continue; b.textContent = v ? '🔇' : '🔊'; b.setAttribute('aria-label', v ? 'Unmute sound' : 'Mute sound'); b.setAttribute('aria-pressed', v ? 'true' : 'false'); b.classList.toggle('off', v); } }
+  function setMusic(v) { musicOn = v; store.set(LS.music, v); AU.setMusic(v); for (const id of ['btnMusic', 'btnMusicStart']) { const b = $(id); if (!b) continue; b.classList.toggle('off', !v); b.setAttribute('aria-pressed', v ? 'true' : 'false'); b.setAttribute('aria-label', v ? 'Music on' : 'Music off'); } }
+  $('btnMute').onclick = $('btnMuteStart').onclick = () => { ac(); setMute(!muted); if (!muted) sfx.ui(); };
+  $('btnMusic').onclick = $('btnMusicStart').onclick = () => { ac(); setMusic(!musicOn); sfx.ui(); };
   $('btnAdhere').onclick = toggleAdhere; $('btnRescueYes').onclick = () => rescue(true); $('btnRescueNo').onclick = () => rescue(false); $('btnPause').onclick = pause; $('btnResume').onclick = resume; $('btnRestart').onclick = start; $('btnPlay').onclick = start; $('btnRetry').onclick = start;
   $('btnHome').onclick = $('btnHome2').onclick = () => { S = null; renderCards(); show('start'); };
   $('btnCollStart').onclick = () => openColl('start'); $('btnCollPause').onclick = () => openColl('pause'); $('btnCollOver').onclick = () => openColl('over'); $('btnCollClose').onclick = closeColl;
@@ -717,12 +702,14 @@
     resize(); window.addEventListener('resize', resize); if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
     window.addEventListener('orientationchange', () => setTimeout(resize, 200));
     // unlock WebAudio on the first tap/click/key; block long-press menus and double-tap zoom on controls
-    const unlock = () => { ac(); window.removeEventListener('pointerdown', unlock, true); window.removeEventListener('keydown', unlock, true); };
-    window.addEventListener('pointerdown', unlock, true); window.addEventListener('keydown', unlock, true);
+    // first pointerdown/touch/key anywhere unlocks audio (iOS: audioSession 'playback' or a silent <audio> loop so the ring switch doesn't mute it)
+    const unlock = () => { ac(); if (AU.running) for (const ev of ['pointerdown', 'touchend', 'keydown']) window.removeEventListener(ev, unlock, true); };
+    for (const ev of ['pointerdown', 'touchend', 'keydown']) window.addEventListener(ev, unlock, true);
+    document.addEventListener('click', e => { const b = e.target.closest('button'); if (b && !['btnMute', 'btnMuteStart', 'btnMusic', 'btnMusicStart'].includes(b.id)) sfx.ui(); }, true);
     document.addEventListener('contextmenu', e => { if (!e.target.closest('#coll .desc')) e.preventDefault(); });
     document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
     document.addEventListener('touchmove', e => { if (!e.target.closest('.screen.scroll')) e.preventDefault(); }, { passive: false });
-    setMute(muted);
+    setMute(muted); setMusic(musicOn);
     for (const id of ['startLogo', 'overLogo']) { $(id).src = CFG.BRAND_LOGO; $(id).alt = CFG.BRAND_NAME + ' logo'; }
     { const names = PRODUCTS.map(p => p.name); $('legalProducts').textContent = names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; }
     $('footBrand').textContent = `· Featuring ${CFG.BRAND_NAME} foam boards`;
@@ -739,7 +726,7 @@
   }
   // test hooks
   window.__fbs = {
-    computeDrop, T, geo, startBill, endBill, boost, updateBill, boards: BOARDS, toggleAdhere, earnAdhere: () => earnAdhere(), rescue, get S() { return S; }, start, drop, pause, resume, products: PRODUCTS,
+    computeDrop, T, geo, audio: AU, startBill, endBill, boost, updateBill, boards: BOARDS, toggleAdhere, earnAdhere: () => earnAdhere(), rescue, get S() { return S; }, start, drop, pause, resume, products: PRODUCTS,
     setMovingX(x) { if (S && S.moving) S.moving.x = x; }, setProduct(id, gl) { if (S && S.moving) { const p = productById[id]; S.moving.p = p; S.moving.look = lookFor(p); const g = (gl && p.gauges.find(x => x.label === gl)) || p.gauges[0]; S.moving.gauge = g; S.moving.t = thickFor(g); S.lineName = p.name + ' · ' + g.label; S.moving.speed = speedFor(p); } },
     spot: { next: spotAdvance, render: spotRender, durationFor, get id() { return curP().id; }, get fact() { return curF() && curF().id; }, get shownAt() { return spot.shownAt; }, history: spot.history, bags: () => ({ p: pBag.st, f: fBag.st }) }, facts: FACTS, layoutBottom,
     finishExtrusion() { return new Promise(r => { const c = () => (!S || !S.moving || !S.moving.extrude) ? r() : requestAnimationFrame(c); c(); }); },
