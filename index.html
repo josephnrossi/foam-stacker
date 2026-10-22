@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0d0f16">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Board Stacker">
+<title>Foam Board Stacker (Demo)</title>
+<meta name="description" content="Demo game: stack foam boards as high as you can.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<canvas id="game" aria-label="Foam Board Stacker game area"></canvas>
+
+<div id="hud" hidden>
+  <button id="btnMute" class="icon-btn" aria-label="Mute sound">🔊</button>
+  <div class="scorebox"><div id="score" aria-live="polite">0</div><div id="best">Best 0</div></div>
+  <button id="btnPause" class="icon-btn" aria-label="Pause">❚❚</button>
+  <div id="nowBoard" aria-live="polite"></div>
+</div>
+
+<section id="start" class="screen">
+  <img class="brand-logo" id="startLogo" alt="">
+  <h1>Foam Board<br><span>Stacker</span></h1>
+  <div class="hosts" id="startHosts"></div>
+  <p class="lead">Tap to drop each board. Overhangs get trimmed. Line them up for a <b>Perfect</b>!</p>
+  <button id="btnPlay" class="btn primary">Play</button>
+  <button id="btnCollStart" class="btn">Board Collection <span class="cnt" id="collCountStart"></span></button>
+  <p class="foot"><span class="demo">Demo</span> <span id="footBrand"></span></p>
+</section>
+
+<section id="pause" class="screen" hidden>
+  <h2>Paused</h2>
+  <button id="btnResume" class="btn primary">Resume</button>
+  <button id="btnRestart" class="btn">Restart</button>
+  <button id="btnCollPause" class="btn">Board Collection</button>
+  <button id="btnHome" class="btn">Home</button>
+  <p class="foot"><span class="demo">Demo</span> build – not an official app</p>
+</section>
+
+<section id="over" class="screen" hidden>
+  <img class="brand-logo small" id="overLogo" alt="">
+  <h2>Great stack!</h2>
+  <div class="hosts small" id="overHosts"></div>
+  <div class="final"><div class="lbl">Score</div><div id="finalScore">0</div><div id="finalMeta"></div><div id="newBest" hidden>New best!</div></div>
+  <div id="unlockNote"></div>
+  <button id="btnRetry" class="btn primary">Retry</button>
+  <button id="btnCollOver" class="btn">Board Collection</button>
+  <button id="btnHome2" class="btn">Home</button>
+</section>
+
+<section id="coll" class="screen scroll" hidden>
+  <div class="coll-head">
+    <h2>Board Collection <span id="collCount"></span></h2>
+    <button id="btnCollClose" class="icon-btn" aria-label="Close collection">✕</button>
+  </div>
+  <p class="coll-sub">Stack a board to unlock its card. Every board has its own trait.</p>
+  <div id="cards"></div>
+  <p class="foot small" id="collFoot"></p>
+</section>
+
+<section id="spriteSheet" hidden></section>
+
+<script src="config.js"></script>
+<script src="products.js"></script>
+<script src="sprites.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

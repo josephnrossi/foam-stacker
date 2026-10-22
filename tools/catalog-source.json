@@ -1,0 +1,1842 @@
+{
+ "meta": {
+  "source": "https://gilmanbrothers.com",
+  "crawled": "2026-10-21",
+  "method": "sitemap-1.xml (33 URLs) + JS-rendered forms + key PDFs (line card, master brochure Rev 1/5/23, tech specs, sell sheets)",
+  "rule": "Only data stated on gilmanbrothers.com or its linked PDFs. Discrete gauge lists come from tech-spec PDFs where available; otherwise only the stated min/max. Anything not stated is 'unknown'.",
+  "unknown": [
+   "Packaging (sheets per carton/skid) – not published",
+   "Pricing – not published",
+   "Discrete intermediate gauges for EAGLECELL and Gilco",
+   "Named InSite Reveal Colors",
+   "Distributor list/locator – not published (referral form only)"
+  ]
+ },
+ "company": {
+  "name": "The Gilman Brothers Company",
+  "address": "PO Box 38, 9 Thomas Rd, Gilman, CT 06336",
+  "phone": "(860) 889-8444",
+  "fax": "(860) 889-5226",
+  "sales": "sales@gilmanbrothers.com",
+  "quotes": "quotes@gilmanbrothers.com (per user; not shown on site)",
+  "duns": "001158203",
+  "social": {
+   "LinkedIn": "https://www.linkedin.com/company/761535",
+   "Instagram": "https://www.instagram.com/gilmanbrothersco/",
+   "Facebook": "https://www.facebook.com/profile.php?id=100064562897003",
+   "YouTube": "https://www.youtube.com/channel/UCjEW6SUDcTtfjrgTR3JdTJQ"
+  },
+  "pages": {
+   "distributorReferral": "https://gilmanbrothers.com/contact-us/distributor-referral/",
+   "requestVisit": "https://gilmanbrothers.com/request-a-visit/",
+   "contact": "https://gilmanbrothers.com/contact-us/",
+   "gallery": "https://gilmanbrothers.com/portfolio/",
+   "resources": "https://gilmanbrothers.com/resource-library/",
+   "news": "https://gilmanbrothers.com/news/",
+   "videos": "https://gilmanbrothers.com/videos/",
+   "sustainability": "https://gilmanbrothers.com/sustainability/",
+   "policies": "https://gilmanbrothers.com/policies/",
+   "products": "https://gilmanbrothers.com/our-products/",
+   "history": "https://gilmanbrothers.com/our-history/"
+  }
+ },
+ "policies": {
+  "freight": "Orders under truckload are FOB Gilman, CT; Truck Load prepaid; Full Truck Load prepaid up to three stops",
+  "terms": "Net 30 (after credit application)",
+  "customSize": "Cost varies; MOQ on custom orders is 75,000 sq. ft.",
+  "cancellations": "Stock items 20% restocking fee; non-stock items changed/canceled after 2 hours are buyer's responsibility",
+  "samples": "Free; shipping paid by requester. Resilient 8.5x11 no charge/freight collect; 24x36 no charge/freight collect (limit 2); 50x87 sample charge/freight collect",
+  "claims": "Quality claims may be denied after 60 days from shipped (invoice) date"
+ },
+ "applications": [
+  {
+   "id": "print-fab",
+   "name": "Wide-Format & Retail Display",
+   "siteName": "Print and Fabrication",
+   "url": "https://gilmanbrothers.com/print-and-fabrication/",
+   "blurb": "Rigid substrates for merchandising signage, retail/POP displays, exhibits and wall art.",
+   "products": [
+    "infinity",
+    "eaglecell",
+    "insite-reveal",
+    "ryno-board"
+   ],
+   "alsoFits": [
+    "insite-colors",
+    "insite-canvas",
+    "gilco-styrene"
+   ],
+   "source": "Products linked from the application page; 'alsoFits' derived from each product's 'Ideal for' list."
+  },
+  {
+   "id": "mount-frame",
+   "name": "Picture Framing & Mounting",
+   "siteName": "Mounting & Framing",
+   "url": "https://gilmanbrothers.com/mounting-framing/",
+   "blurb": "Paper-faced InSite® and MountCor® boards with the non-pillowing Reveal® center for the art/framing industry.",
+   "products": [
+    "insite-reveal",
+    "insite-ha",
+    "insite-psa",
+    "insite-acid-free",
+    "mountcor",
+    "mountcor-canvas"
+   ],
+   "alsoFits": [
+    "ryno-board",
+    "insite-canvas",
+    "resilient-mount",
+    "resilient-align"
+   ],
+   "source": "Products linked from the application page; 'alsoFits' derived from 'Ideal for' lists."
+  },
+  {
+   "id": "wall-decor",
+   "name": "Wall Décor & Photo Mounting",
+   "siteName": "Wall Decor Options",
+   "url": "https://gilmanbrothers.com/wall-decor-options/",
+   "blurb": "Resilient® soft-touch, spring-back foam with a true-black edge, plus the ADHERE™ removable hanging system.",
+   "products": [
+    "resilient-print",
+    "resilient-mount",
+    "resilient-align",
+    "adhere"
+   ],
+   "alsoFits": [
+    "insite-canvas"
+   ],
+   "source": "Products linked from the application page."
+  }
+ ],
+ "endUses": [
+  {
+   "label": "POP & retail displays",
+   "products": [
+    "infinity",
+    "eaglecell",
+    "insite-reveal",
+    "insite-colors",
+    "insite-canvas",
+    "ryno-board"
+   ]
+  },
+  {
+   "label": "Trade show booths, exhibits & kiosks",
+   "products": [
+    "infinity",
+    "eaglecell",
+    "insite-reveal",
+    "insite-colors",
+    "insite-canvas"
+   ]
+  },
+  {
+   "label": "Signage",
+   "products": [
+    "infinity",
+    "eaglecell",
+    "insite-reveal",
+    "insite-colors",
+    "ryno-board",
+    "gilco-styrene"
+   ]
+  },
+  {
+   "label": "3D / cold-bent displays",
+   "products": [
+    "infinity"
+   ]
+  },
+  {
+   "label": "Packaging",
+   "products": [
+    "eaglecell",
+    "infinity",
+    "ryno-board",
+    "insite-reveal"
+   ]
+  },
+  {
+   "label": "Sustainable / recyclable / plastic-free",
+   "products": [
+    "eaglecell",
+    "infinity"
+   ]
+  },
+  {
+   "label": "Vacuum forming",
+   "products": [
+    "gilco-styrene"
+   ]
+  },
+  {
+   "label": "Photo & poster mounting (heat)",
+   "products": [
+    "mountcor",
+    "insite-ha"
+   ]
+  },
+  {
+   "label": "Photo & poster mounting (no heat)",
+   "products": [
+    "insite-psa",
+    "resilient-mount",
+    "resilient-align"
+   ]
+  },
+  {
+   "label": "Canvas & giclée mounting",
+   "products": [
+    "mountcor-canvas"
+   ]
+  },
+  {
+   "label": "Faux gallery wraps",
+   "products": [
+    "insite-canvas"
+   ]
+  },
+  {
+   "label": "Preservation / archival framing",
+   "products": [
+    "insite-acid-free",
+    "mountcor"
+   ]
+  },
+  {
+   "label": "Direct-print wall décor",
+   "products": [
+    "resilient-print",
+    "insite-canvas"
+   ]
+  },
+  {
+   "label": "Hanging without nails",
+   "products": [
+    "adhere",
+    "resilient-align"
+   ]
+  },
+  {
+   "label": "Vinyl graphics & laminating",
+   "products": [
+    "ryno-board",
+    "insite-reveal"
+   ]
+  }
+ ],
+ "products": [
+  {
+   "id": "infinity",
+   "name": "INFINITY®",
+   "tagline": "Styrene Faced Foamboard",
+   "url": "https://gilmanbrothers.com/infinity/",
+   "family": "Styrene-Faced Foam Board",
+   "description": "Polystyrene foam core between two extra-rigid sheets of digital-grade polystyrene. Can be printed, shipped flat, then cold bent into 3D displays.",
+   "benefits": [
+    "2.5x density foam (vs. competing products, per site)",
+    "UV stabilized (UV-resistant package applies to 50\" and narrower sizes only)",
+    "~7% less ink for full coverage",
+    "3D cold-bend capability",
+    "Cuts ~30% quicker on digital cutters such as Zünd",
+    "No pre-cleaning needed",
+    "22% less weight",
+    "100% recyclable (3mm cited as recyclable EPVA alternative)",
+    "Manufactured in the USA"
+   ],
+   "idealFor": [
+    "3D POP Displays",
+    "Digital & Screen Printing",
+    "Exhibits & Kiosks",
+    "Framing",
+    "Packaging",
+    "Routing, Die Cutting",
+    "Digital & Knife Cutting",
+    "Fabrication",
+    "Trade Show Booths",
+    "Signage"
+   ],
+   "gauges": {
+    "min": "3mm",
+    "max": "1\"",
+    "listed": [
+     "3mm",
+     "3/16\"",
+     "1/2\""
+    ],
+    "listedSource": "Technical Specifications – INFINITY PDF (3mm, 3/16\", 1/2\")",
+    "otherAllowed": true
+   },
+   "sizes": {
+    "min": "16\" x 20\"",
+    "max": "60\" x 192\"",
+    "listed": [
+     "16\" x 20\"",
+     "60\" x 192\"",
+     "48\" x 192\" (3mm)"
+    ],
+    "minW": 16,
+    "minL": 20,
+    "maxW": 60,
+    "maxL": 192,
+    "customAllowed": true,
+    "note": "3mm listed as 3mm x 48\" x 192\". Sell sheet: custom sizes available."
+   },
+   "colors": [
+    "White core / White faces",
+    "Black core / Black faces",
+    "White core / Black faces",
+    "Black core / White faces"
+   ],
+   "colorNote": "Site: 'All configurations of Black and White; 3mm available in White'. Sell sheet: core White and Black, liner White and Black.",
+   "constraints": [
+    {
+     "if": {
+      "gauge": "3mm"
+     },
+     "colors": [
+      "White core / White faces"
+     ],
+     "note": "3mm available in White only"
+    }
+   ],
+   "resources": [
+    {
+     "label": "INFINITY Sell Sheet",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/infinity-sell-sheet.pdf"
+    },
+    {
+     "label": "Technical Specifications – INFINITY",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2025/04/Technical-Specifications-INFINITY-2.pdf"
+    },
+    {
+     "label": "INFINITY Component Benefits",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/infinity-component-benefits.pdf"
+    },
+    {
+     "label": "INFINITY vs Competition",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/INFINITY-vs-Competition.pdf"
+    },
+    {
+     "label": "Look What INFINITY Can Do for You",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/infinity-look-what-infinity-can-do-for-you.pdf"
+    },
+    {
+     "label": "SDS – INFINITY White and Black",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Gilman-SDS-Infinity-White-and-Black.pdf"
+    }
+   ],
+   "dataSheet": "https://gilmanbrothers.com/wp-content/uploads/2025/04/Technical-Specifications-INFINITY-2.pdf",
+   "notes": [
+    "Exact color configurations beyond 'all configurations of black and white' are not enumerated on the site; the four core/face combinations are inferred from the sell sheet (core White/Black, liner White/Black)."
+   ],
+   "variants": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [
+    "print-fab"
+   ],
+   "alsoFits": []
+  },
+  {
+   "id": "eaglecell",
+   "name": "EAGLECELL®",
+   "tagline": "All-Paper Honeycomb Graphics Board",
+   "url": "https://gilmanbrothers.com/eaglecell/",
+   "family": "All-Paper Board",
+   "description": "Recyclable all-paper honeycomb graphics board: proprietary honeycomb paper core (95% open space) with triple-thick bright white clay-coated liners. Eco alternative to plastic, metal and wood.",
+   "benefits": [
+    "100% paper based, 100% recyclable (any recycle program)",
+    "Honeycomb core with 95% open space – lightweight",
+    "I-beam-like strength, rigidity and warp resistance",
+    "Triple-thick bright white clay-coated liners",
+    "Kraft core bonded to SFI-certified surface papers",
+    "Superior digital cutting performance"
+   ],
+   "idealFor": [
+    "POP Displays",
+    "Exhibits & Kiosks",
+    "Framing",
+    "Packaging",
+    "Signage",
+    "Fabrication",
+    "Digital & Screen Printing",
+    "Digital & Knife Cutting",
+    "Routing, Die Cutting"
+   ],
+   "gauges": {
+    "min": "1/4\"",
+    "max": "4\"",
+    "listed": [
+     "1/4\"",
+     "1/2\"",
+     "4\""
+    ],
+    "listedSource": "Product page min/max; 1/2\" shown in gallery (Beach Chairs, Artisan Oil Display)",
+    "otherAllowed": true
+   },
+   "sizes": {
+    "min": "24\" x 96\"",
+    "max": "60\" x 144\"",
+    "listed": [
+     "24\" x 96\"",
+     "60\" x 144\""
+    ],
+    "minW": 24,
+    "minL": 24,
+    "maxW": 60,
+    "maxL": 144,
+    "customAllowed": true,
+    "note": "Sell sheet: width 24–60\", length 24–144\", custom sizes available."
+   },
+   "colors": [
+    "White/Kraft/White",
+    "White/White/White"
+   ],
+   "colorNote": "Configurations per product page.",
+   "resources": [
+    {
+     "label": "EAGLECELL Sell Sheet",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2026/07/EAGLECELL-Sell-Sheet.pdf"
+    },
+    {
+     "label": "EAGLECELL Packaging Advantages",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2026/07/EAGLECELL-Packagng-Advantages.pdf"
+    },
+    {
+     "label": "EAGLECELL Tolerances",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2026/07/EAGLECELL-Tolerances-1.pdf"
+    },
+    {
+     "label": "EAGLECELL Cutting Guidelines",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2026/07/EAGLECELL-cutting-guidelines.pdf"
+    }
+   ],
+   "dataSheet": "https://gilmanbrothers.com/wp-content/uploads/2026/07/EAGLECELL-Tolerances-1.pdf",
+   "notes": [
+    "Conflicts: product page min gauge 1/4\"; sell sheet says min 3/16\" (Natural only). Master brochure (Rev 1/5/23) says 1/2\"–4\" and 48\"x96\"–60\"x120\". App uses the product page.",
+    "No SDS for EAGLECELL in the Resource Library."
+   ],
+   "variants": [],
+   "constraints": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [
+    "print-fab"
+   ],
+   "alsoFits": []
+  },
+  {
+   "id": "insite-reveal",
+   "name": "InSite® Reveal®",
+   "tagline": "Clay-Coated Paper-Faced Foamboard",
+   "url": "https://gilmanbrothers.com/insite-reveal-2/",
+   "family": "Paper-Faced Foam Board",
+   "description": "Polystyrene foam core between two sheets of bright white clay-coated paper, with the proprietary Reveal® foam center engineered to retain its thickness (non-pillowing).",
+   "benefits": [
+    "UL classified foam center",
+    "Proprietary Reveal® foam center",
+    "Moisture-resistant clay coating – ink coverage & color gloss",
+    "Smooth & lightweight",
+    "UV stabilized",
+    "Superior cutting on ZÜND®",
+    "Warp & dent resistant",
+    "Manufactured in the USA"
+   ],
+   "idealFor": [
+    "POP Displays",
+    "Exhibits & Kiosks",
+    "Framing",
+    "Signage",
+    "Fabrication",
+    "Digital & Screen Printing",
+    "Digital & Knife Cutting",
+    "Routing, Die Cutting",
+    "Packaging"
+   ],
+   "gauges": {
+    "min": "1/8\"",
+    "max": "1\"",
+    "listed": [
+     "1/8\"",
+     "3/16\"",
+     "1/4\"",
+     "1/2\"",
+     "1\""
+    ],
+    "listedSource": "Technical-Specifications-Insite PDF (1/8, 3/16, 1/4, 1/2) + page max 1\"",
+    "otherAllowed": true
+   },
+   "sizes": {
+    "min": "16\" x 20\"",
+    "max": "60\" x 192\"",
+    "listed": [
+     "16\" x 20\"",
+     "60\" x 192\""
+    ],
+    "minW": 16,
+    "minL": 20,
+    "maxW": 60,
+    "maxL": 192,
+    "customAllowed": true,
+    "note": "Sell sheet min 16\" x 24\"; product page min 16\" x 20\"."
+   },
+   "colors": [
+    "White",
+    "Black",
+    "Other black/white variation (specify in notes)"
+   ],
+   "colorNote": "Site: 'Multiple variations of Black and White'. Brochure: bright white or black facers.",
+   "resources": [
+    {
+     "label": "INSITE REVEAL Sell Sheet",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/INSITE-REVEAL-Sell-Sheet.pdf"
+    },
+    {
+     "label": "Technical Specifications – InSite",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Technical-Specifications-Insite.pdf"
+    },
+    {
+     "label": "INSITE REVEAL – Instructions for Mounting",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/Insite-Reveal-Directions-for-Mounting.pdf"
+    },
+    {
+     "label": "SDS – InSite Reveal White, Black and Colors",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Gilman-SDS-Insite-Reveal-White-Black-and-Colors.pdf"
+    }
+   ],
+   "dataSheet": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Technical-Specifications-Insite.pdf",
+   "notes": [
+    "Specific black/white variations are not enumerated on the site.",
+    "Sell sheet min gauge 3/16\"; product page min 1/8\"."
+   ],
+   "variants": [],
+   "constraints": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [
+    "print-fab",
+    "mount-frame"
+   ],
+   "alsoFits": []
+  },
+  {
+   "id": "ryno-board",
+   "name": "Ryno Board®",
+   "tagline": "High-Density Clay-Coated Foamboard",
+   "url": "https://gilmanbrothers.com/ryno-board/",
+   "family": "Paper-Faced Foam Board",
+   "description": "Extruded high-density, high-compressive polystyrene foamboard with double-thick clay-coated bright white liners for rigidity and structural performance.",
+   "benefits": [
+    "Highest density foam (Gilman line)",
+    "Double-thick clay-coated liners",
+    "Resistant to crushing, warping & denting",
+    "Superior performance on ZÜND and other digital cutters/routers",
+    "Adhesive-coated special item versions available (incl. Ryno Board HD Self-Adhesive)",
+    "Manufactured in the USA"
+   ],
+   "idealFor": [
+    "Signage",
+    "Packaging",
+    "Graphic Applications",
+    "Mounting & Framing",
+    "Laminating",
+    "Vinyl Graphics",
+    "POP Displays",
+    "Exhibits & Kiosks",
+    "Sets and props"
+   ],
+   "gauges": {
+    "min": "3/16\"",
+    "max": "1\"",
+    "listed": [
+     "3/16\"",
+     "1/4\"",
+     "1/2\"",
+     "3/4\"",
+     "1\""
+    ],
+    "listedSource": "Technical Specifications – Ryno Board PDF",
+    "otherAllowed": false
+   },
+   "sizes": {
+    "min": "24\" x 36\"",
+    "max": "60\" x 192\"",
+    "listed": [
+     "24\" x 36\"",
+     "60\" x 192\""
+    ],
+    "minW": 24,
+    "minL": 36,
+    "maxW": 60,
+    "maxL": 192,
+    "customAllowed": true,
+    "note": "Sell sheet: custom colors and sizes."
+   },
+   "colors": [
+    "White"
+   ],
+   "colorNote": "Standard color White (sell sheet: custom colors available).",
+   "variants": [
+    {
+     "key": "adhesive",
+     "label": "Version",
+     "options": [
+      "Standard (no adhesive)",
+      "Adhesive-coated special item (specify)"
+     ]
+    }
+   ],
+   "resources": [
+    {
+     "label": "RYNO BOARD Sell Sheet",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/RYNO-BOARD-Sell-Sheet.pdf"
+    },
+    {
+     "label": "Technical Specifications – Ryno Board",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Technical-Specifications-Ryno-Board.pdf"
+    },
+    {
+     "label": "SDS – Ryno Board",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Gilman-SDS-Ryno-Board-White-and-White.pdf"
+    }
+   ],
+   "dataSheet": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Technical-Specifications-Ryno-Board.pdf",
+   "notes": [
+    "Master brochure (Rev 1/5/23) lists 3/16\"–1/2\" and 24\"x36\"–60\"x120\"; product page and tech spec list up to 1\" and 60\"x192\"."
+   ],
+   "constraints": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [
+    "print-fab"
+   ],
+   "alsoFits": [
+    "mount-frame"
+   ]
+  },
+  {
+   "id": "insite-colors",
+   "name": "InSite® Reveal® Colors",
+   "tagline": "Colored Paper-Faced Foamboard",
+   "url": "https://gilmanbrothers.com/insite-color/",
+   "family": "Paper-Faced Foam Board",
+   "description": "Polystyrene foam core between two sheets of clay-coated colored paper; same Reveal® foam center as InSite® Reveal®.",
+   "benefits": [
+    "Proprietary Reveal® foam center",
+    "Moisture-resistant clay coating",
+    "Smooth & lightweight",
+    "UV stabilized",
+    "Superior cutting on ZÜND®",
+    "Manufactured in the USA"
+   ],
+   "idealFor": [
+    "POP Displays",
+    "Exhibits & Kiosks",
+    "Framing",
+    "Signage",
+    "Fabrication",
+    "Digital & Screen Printing",
+    "Digital & Knife Cutting",
+    "Routing, Die Cutting"
+   ],
+   "gauges": {
+    "min": "1/8\"",
+    "max": "1/2\"",
+    "listed": [
+     "1/8\"",
+     "3/16\"",
+     "1/4\"",
+     "1/2\""
+    ],
+    "listedSource": "Page range 1/8\"–1/2\"; discrete gauges from InSite tech spec",
+    "otherAllowed": true
+   },
+   "sizes": {
+    "min": "24\" x 36\"",
+    "max": "60\" x 192\"",
+    "listed": [
+     "24\" x 36\"",
+     "60\" x 192\""
+    ],
+    "minW": 24,
+    "minL": 36,
+    "maxW": 60,
+    "maxL": 192,
+    "customAllowed": true
+   },
+   "colors": [
+    "Assorted color (specify color in notes)"
+   ],
+   "colorNote": "Site lists 'Assorted Colors' only; the actual color list is not published.",
+   "resources": [
+    {
+     "label": "SDS – InSite Reveal White, Black and Colors",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Gilman-SDS-Insite-Reveal-White-Black-and-Colors.pdf"
+    }
+   ],
+   "dataSheet": null,
+   "notes": [
+    "No sell sheet or color chart on the site; color names unknown.",
+    "Not linked from any of the three application pages; assigned by its 'Ideal for' list.",
+    "The Sustainability page links to /insite-colors/ which returns 404 (real page is /insite-color/)."
+   ],
+   "variants": [],
+   "constraints": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [],
+   "alsoFits": [
+    "print-fab"
+   ]
+  },
+  {
+   "id": "insite-canvas",
+   "name": "InSite® Canvas",
+   "tagline": "Canvas Textured Foamboard",
+   "url": "https://gilmanbrothers.com/insite-reveal-3/",
+   "family": "Paper-Faced Foam Board",
+   "description": "Cost-effective faux-canvas extruded polystyrene core foamboard with bright-white embossed textured facers; V-cuts cleanly for faux gallery wraps.",
+   "benefits": [
+    "Bright-white embossed textured facers",
+    "Available 1-sided or 2-sided",
+    "V-cuts cleanly for bending and gallery wraps",
+    "Reveal® foam center"
+   ],
+   "idealFor": [
+    "Digital Printing and Screen Printing",
+    "Gallery wraps",
+    "Cut graphics",
+    "Decorative wall display",
+    "POP Display",
+    "Exhibits"
+   ],
+   "gauges": {
+    "min": "3/16\"",
+    "max": "3/16\"",
+    "listed": [
+     "3/16\""
+    ],
+    "listedSource": "Product page",
+    "otherAllowed": false
+   },
+   "sizes": {
+    "min": "48\" x 96\"",
+    "max": "60\" x 120\"",
+    "listed": [
+     "48\" x 96\"",
+     "60\" x 120\""
+    ],
+    "minW": 48,
+    "minL": 96,
+    "maxW": 60,
+    "maxL": 120,
+    "customAllowed": true
+   },
+   "colors": [
+    "White"
+   ],
+   "colorNote": "Standard color White.",
+   "variants": [
+    {
+     "key": "sides",
+     "label": "Texture",
+     "options": [
+      "1-sided",
+      "2-sided"
+     ]
+    }
+   ],
+   "resources": [
+    {
+     "label": "INSITE CANVAS Sell Sheet",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/INSITE-CANVAS-Sell-Sheet.pdf"
+    }
+   ],
+   "dataSheet": "https://gilmanbrothers.com/wp-content/uploads/2024/03/INSITE-CANVAS-Sell-Sheet.pdf",
+   "notes": [
+    "Page URL is /insite-reveal-3/ (slug doesn't match product).",
+    "Brochure lists 24\"x36\"–60\"x120\"; product page min 48\"x96\".",
+    "News mentions 'INFINITY® Canvas Textured Foam Board' (HP booth) – not listed as a product on the site."
+   ],
+   "constraints": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [],
+   "alsoFits": [
+    "print-fab",
+    "mount-frame",
+    "wall-decor"
+   ]
+  },
+  {
+   "id": "gilco-styrene",
+   "name": "Gilco® Styrene",
+   "tagline": "Digital-Grade 100% Styrene Sheets",
+   "url": "https://gilmanbrothers.com/gilco-styrene/",
+   "family": "Styrene Sheet",
+   "description": "Economical all-plastic 100% styrene sheets with dimensional stability and impact resistance; can be cut, bent and bonded.",
+   "benefits": [
+    "Economical all-plastic solution",
+    "Dimensional stability & impact resistance",
+    "Can be cut, bent, bonded"
+   ],
+   "idealFor": [
+    "Screen and digital printing",
+    "Vacuum forming",
+    "Signs and displays",
+    "Fabrication"
+   ],
+   "gauges": {
+    "min": ".015\"",
+    "max": ".080\"",
+    "listed": [
+     ".015\"",
+     ".080\""
+    ],
+    "listedSource": "Product page min/max (intermediate gauges not listed)",
+    "otherAllowed": true
+   },
+   "sizes": {
+    "min": "48\" x 96\"",
+    "max": "60\" x 192\"",
+    "listed": [
+     "48\" x 96\"",
+     "60\" x 120\"",
+     "60\" x 192\""
+    ],
+    "minW": 48,
+    "minL": 96,
+    "maxW": 60,
+    "maxL": 192,
+    "customAllowed": true,
+    "note": "Spec block says max 60\"x192\"; body text says 60\"x120\"."
+   },
+   "colors": [
+    "Near Dead White"
+   ],
+   "colorNote": "Standard color Near Dead White.",
+   "resources": [
+    {
+     "label": "SDS – Gilco Styrene",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Gilman-SDS-Gilco-Styrene.pdf"
+    }
+   ],
+   "dataSheet": null,
+   "notes": [
+    "Max size conflict on page (60x192 vs 60x120).",
+    "No sell sheet; not linked from an application page; not in master brochure."
+   ],
+   "variants": [],
+   "constraints": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [],
+   "alsoFits": [
+    "print-fab"
+   ]
+  },
+  {
+   "id": "insite-ha",
+   "name": "InSite® Reveal® HA",
+   "tagline": "Heat-Activated Adhesive Coated Foamboard",
+   "url": "https://gilmanbrothers.com/insite-ha/",
+   "family": "Mounting Board",
+   "description": "Extruded polystyrene core with clay-coated liners; one side has a neutral-pH heat-activated adhesive. Ready to use – no mounting tissues or films.",
+   "benefits": [
+    "No mounting tissues or films needed",
+    "Air Release Technology – prevents bubbles",
+    "For mechanical or hot vacuum presses and heated roll laminators",
+    "Neutral pH HA adhesive",
+    "Manufactured in the USA"
+   ],
+   "idealFor": [
+    "Heat tolerant paper",
+    "Newspaper",
+    "Poster images",
+    "RC photographs"
+   ],
+   "gauges": {
+    "min": "1/8\"",
+    "max": "3/16\"",
+    "listed": [
+     "1/8\"",
+     "3/16\""
+    ],
+    "listedSource": "Product page + master brochure",
+    "otherAllowed": false
+   },
+   "sizes": {
+    "min": "24\" x 36\"",
+    "max": "48\" x 96\"",
+    "listed": [
+     "24\" x 36\"",
+     "48\" x 96\""
+    ],
+    "minW": 24,
+    "minL": 36,
+    "maxW": 48,
+    "maxL": 96,
+    "customAllowed": true
+   },
+   "colors": [
+    "White",
+    "Black"
+   ],
+   "colorNote": "Available in white or black.",
+   "resources": [
+    {
+     "label": "InSite Heat Activated Instructions",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Insite-Heat-Activated-Instructions.pdf"
+    },
+    {
+     "label": "Framing and Wall Decor Options",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Framing-and-Wall-Decor-Options.pdf"
+    },
+    {
+     "label": "SDS – InSite Heat Activated",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Gilman-SDS-Insite-Heat-Activated-White-and-Black.pdf"
+    }
+   ],
+   "dataSheet": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Insite-Heat-Activated-Instructions.pdf",
+   "notes": [
+    "Page text says it bonds at '165°F-70°F' – looks like a typo (likely 165–170°F); verify before quoting.",
+    "SDS list includes a separate 'Heat Activated Low Temp' SDS – product not otherwise described."
+   ],
+   "variants": [],
+   "constraints": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [
+    "mount-frame"
+   ],
+   "alsoFits": []
+  },
+  {
+   "id": "insite-psa",
+   "name": "InSite® Self-Adhesive",
+   "tagline": "Pressure-Sensitive Adhesive Foamboard",
+   "url": "https://gilmanbrothers.com/insite-psa/",
+   "family": "Mounting Board",
+   "description": "Reveal® memory foam center faced one side with clay-coated paper and the other with a Low-Tack or High-Tack cold pressure-sensitive adhesive under a release liner.",
+   "benefits": [
+    "High-Tack or Low-Tack adhesion",
+    "No heat required – roller, squeegee, cold vacuum frame or cold laminator",
+    "Low-Tack is repositionable (green liner); High-Tack grabs immediately (black liner)",
+    "Recommended shelf life: one year"
+   ],
+   "idealFor": [
+    "Art Posters",
+    "Photographs"
+   ],
+   "gauges": {
+    "min": "3/16\"",
+    "max": "3/16\"",
+    "listed": [
+     "3/16\""
+    ],
+    "listedSource": "Product page",
+    "otherAllowed": false
+   },
+   "sizes": {
+    "min": "24\" x 36\"",
+    "max": "48\" x 96\"",
+    "listed": [
+     "24\" x 36\"",
+     "48\" x 96\""
+    ],
+    "minW": 24,
+    "minL": 36,
+    "maxW": 48,
+    "maxL": 96,
+    "customAllowed": true
+   },
+   "colors": [
+    "White",
+    "Black"
+   ],
+   "colorNote": "Available in white or black.",
+   "variants": [
+    {
+     "key": "tack",
+     "label": "Adhesive",
+     "options": [
+      "Low-Tack (repositionable)",
+      "High-Tack"
+     ]
+    }
+   ],
+   "resources": [
+    {
+     "label": "Instructions – InSite Self Adhesive",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Instructions-InSiteSA.pdf"
+    },
+    {
+     "label": "Framing and Wall Decor Options",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Framing-and-Wall-Decor-Options.pdf"
+    },
+    {
+     "label": "SDS – InSite Self Adhesive LT and HT",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Gilman-SDS-Insite-Black-White-Self-Adhesive-LT-anf-Ht.pdf"
+    }
+   ],
+   "dataSheet": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Instructions-InSiteSA.pdf",
+   "notes": [],
+   "constraints": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [
+    "mount-frame"
+   ],
+   "alsoFits": []
+  },
+  {
+   "id": "insite-acid-free",
+   "name": "InSite® Acid-Free",
+   "tagline": "Acid-Free Paper-Faced Foamboard",
+   "url": "https://gilmanbrothers.com/insite-acid-free/",
+   "family": "Mounting Board",
+   "description": "Polystyrene foam core between two acid-free paper liners for preservation mounting and framing.",
+   "benefits": [
+    "Complies with PAT standards",
+    "Liner pH 7.5–9.5, buffered with 3–5% calcium carbonate",
+    "100% high alpha cellulose virgin pulp liners",
+    "Highly warp resistant"
+   ],
+   "idealFor": [
+    "Preservation mounting and framing",
+    "Long-term display and storage",
+    "Fine art and photography"
+   ],
+   "gauges": {
+    "min": "3/16\"",
+    "max": "3/16\"",
+    "listed": [
+     "3/16\""
+    ],
+    "listedSource": "Product page",
+    "otherAllowed": false
+   },
+   "sizes": {
+    "min": "24\" x 36\"",
+    "max": "48\" x 96\"",
+    "listed": [
+     "24\" x 36\"",
+     "48\" x 96\""
+    ],
+    "minW": 24,
+    "minL": 36,
+    "maxW": 48,
+    "maxL": 96,
+    "customAllowed": true
+   },
+   "colors": [
+    "Natural White"
+   ],
+   "colorNote": "Natural white.",
+   "resources": [
+    {
+     "label": "InSite Acid Free Sell Sheet",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Insite-Acid-Free-Foamboard-Sell-Sheet.pdf"
+    },
+    {
+     "label": "SDS – InSite Acid Free",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Gilman-SDS-Insite-Acid-Free.pdf"
+    }
+   ],
+   "dataSheet": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Insite-Acid-Free-Foamboard-Sell-Sheet.pdf",
+   "notes": [],
+   "variants": [],
+   "constraints": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [
+    "mount-frame"
+   ],
+   "alsoFits": []
+  },
+  {
+   "id": "mountcor",
+   "name": "MountCor®",
+   "tagline": "130°F Permanent HA Foamboard",
+   "url": "https://gilmanbrothers.com/mounting-framing/mountcor/",
+   "family": "Mounting Board",
+   "description": "Heat-activated board with the lowest bonding temperature (130°F / 54°C) per Gilman; neutral-pH permanent adhesive, translucent gridded release liner, air-release technology, acid-free.",
+   "benefits": [
+    "130°F safe temperature",
+    "Universal permanent adhesion",
+    "Translucent gridded release liner",
+    "Clean dust-free surface",
+    "No air entrapment",
+    "Acid-free (ANSI/NISO Z39.48 facing papers)",
+    "Rigid foam cuts clean"
+   ],
+   "idealFor": [
+    "All digital printing",
+    "Toner copiers, laser, plotters",
+    "Waterborne, solvent, UV and latex inkjet",
+    "Posters and prints",
+    "Resin-coated and digital photo papers",
+    "Synthetic papers",
+    "Polyester-encapsulated charts and maps"
+   ],
+   "gauges": {
+    "min": "3/16\"",
+    "max": "3/16\"",
+    "listed": [
+     "3/16\""
+    ],
+    "listedSource": "Product page",
+    "otherAllowed": false
+   },
+   "sizes": {
+    "min": "24\" x 36\"",
+    "max": "48\" x 96\"",
+    "listed": [
+     "24\" x 36\"",
+     "48\" x 96\""
+    ],
+    "minW": 24,
+    "minL": 36,
+    "maxW": 48,
+    "maxL": 96,
+    "customAllowed": true
+   },
+   "colors": [
+    "White",
+    "Black"
+   ],
+   "colorNote": "Spec block says White; body text and brochure say white or black.",
+   "resources": [
+    {
+     "label": "MountCor Sell Sheet",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/MountCor-Sell-Sheet.pdf"
+    },
+    {
+     "label": "MountCor Instructions",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/MountCor-Instructions.pdf"
+    },
+    {
+     "label": "SDS – MountCor",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Gilman-SDS-MounCor-White-and-Black.pdf"
+    }
+   ],
+   "dataSheet": "https://gilmanbrothers.com/wp-content/uploads/2024/03/MountCor-Sell-Sheet.pdf",
+   "notes": [
+    "Color conflict on page: 'Standard color: White' vs 'Available in white or black'."
+   ],
+   "variants": [],
+   "constraints": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [
+    "mount-frame"
+   ],
+   "alsoFits": []
+  },
+  {
+   "id": "mountcor-canvas",
+   "name": "MountCor® Canvas",
+   "tagline": "Permanent HA Board for Printed Textiles",
+   "url": "https://gilmanbrothers.com/mountcor-canvas/",
+   "family": "Mounting Board",
+   "description": "HA board developed for mounting digitally printed canvases and fine-art giclées that cannot be stretched; bonds at 130°F (54°C), full tear strength in ~4 minutes in a vacuum press.",
+   "benefits": [
+    "130°F safe temperature",
+    "Bonds all canvas grades/weights (11–24 mil), coated/uncoated/metallic",
+    "Translucent gridded release liner",
+    "No air entrapment",
+    "Acid-free"
+   ],
+   "idealFor": [
+    "Printed canvas & giclées",
+    "Natural and synthetic fabrics",
+    "Textured/decorative papers",
+    "Watercolor paper",
+    "Tyvek, Yupo and synthetic papers"
+   ],
+   "gauges": {
+    "min": "3/16\"",
+    "max": "3/16\"",
+    "listed": [
+     "3/16\""
+    ],
+    "listedSource": "Product page",
+    "otherAllowed": false
+   },
+   "sizes": {
+    "min": "24\" x 36\"",
+    "max": "48\" x 96\"",
+    "listed": [
+     "24\" x 36\"",
+     "48\" x 96\""
+    ],
+    "minW": 24,
+    "minL": 36,
+    "maxW": 48,
+    "maxL": 96,
+    "customAllowed": true
+   },
+   "colors": [
+    "White"
+   ],
+   "colorNote": "Available in white.",
+   "resources": [
+    {
+     "label": "MountCor Canvas Sell Sheet",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/MountCor-Canvas-Sell-Sheet.pdf"
+    },
+    {
+     "label": "MountCor Canvas Instructions",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/MountCor-Canvas-Instructions.pdf"
+    },
+    {
+     "label": "SDS – MountCor Canvas",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Gilman-SDS-MountCor-Canvas.pdf"
+    }
+   ],
+   "dataSheet": "https://gilmanbrothers.com/wp-content/uploads/2024/03/MountCor-Canvas-Sell-Sheet.pdf",
+   "notes": [],
+   "variants": [],
+   "constraints": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [
+    "mount-frame"
+   ],
+   "alsoFits": []
+  },
+  {
+   "id": "resilient-print",
+   "name": "Resilient® PRINT™",
+   "tagline": "Soft Touch Foam Board for Direct Digital Printing",
+   "url": "https://gilmanbrothers.com/resilient-print/",
+   "family": "Soft Foam Board",
+   "description": "Velvety smooth closed-cell foam board with a consistent white surface for direct digital printing; velvet black core edge needs no treatment. Patent pending.",
+   "benefits": [
+    "Spring-Back technology",
+    "Closed-cell construction",
+    "Velvet black core – display-ready edge",
+    "27% lighter weight",
+    "Dent-resistant corners",
+    "Superior cutability",
+    "Moisture resistant",
+    "Made in USA"
+   ],
+   "idealFor": [
+    "Direct Print Wall Décor",
+    "3D Signage",
+    "3D Graphics"
+   ],
+   "gauges": {
+    "min": "1/2\"",
+    "max": "1\"",
+    "listed": [
+     "1/2\"",
+     "3/4\"",
+     "1\""
+    ],
+    "listedSource": "Product page",
+    "otherAllowed": false
+   },
+   "sizes": {
+    "min": "50\" x 87\"",
+    "max": "50\" x 87\"",
+    "listed": [
+     "50\" x 87\""
+    ],
+    "minW": null,
+    "minL": null,
+    "maxW": null,
+    "maxL": null,
+    "customAllowed": true,
+    "note": "Custom sizes available."
+   },
+   "colors": [
+    "Black core / White liner"
+   ],
+   "colorNote": "Core black, liner white.",
+   "resources": [
+    {
+     "label": "RESILIENT PRINT Sell Sheet",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/RESILIENT-PRINT-Sell-Sheet-2.pdf"
+    },
+    {
+     "label": "Resilient Commercial Package",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/Resilient-Commercial-Package-External.pdf"
+    },
+    {
+     "label": "Resilient FAQ",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/resilient-faq.pdf"
+    },
+    {
+     "label": "SDS – Resilient Soft Touch Graphics Board",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Gilman-SDS-Resilient™-Soft-Touch-Graphics-Board-US-EN-4-sds.pdf"
+    }
+   ],
+   "dataSheet": "https://gilmanbrothers.com/wp-content/uploads/2024/10/RESILIENT-PRINT-Sell-Sheet-2.pdf",
+   "notes": [
+    "Samples: 8.5x11 and 24x36 no charge/freight collect (24x36 limit 2); 50x87 sample charge (Policies page)."
+   ],
+   "variants": [],
+   "constraints": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [
+    "wall-decor"
+   ],
+   "alsoFits": []
+  },
+  {
+   "id": "resilient-mount",
+   "name": "Resilient® MOUNT™",
+   "tagline": "Soft Touch Foam PSA Mounting Board",
+   "url": "https://gilmanbrothers.com/resilient-mount/",
+   "family": "Soft Foam Board",
+   "description": "Permanent pressure-sensitive-adhesive mounting board with a velvety smooth closed-cell foam core. Patent pending.",
+   "benefits": [
+    "Permanent PSA",
+    "Spring-Back technology",
+    "Closed-cell, dent-proof finish",
+    "Velvet black core",
+    "27% lighter weight",
+    "Superior cutability",
+    "Moisture resistant",
+    "Made in USA"
+   ],
+   "idealFor": [
+    "Photo & print mounting",
+    "Brushed aluminum, gold, magnetic, fabric surfaces",
+    "SEG surface combos"
+   ],
+   "gauges": {
+    "min": "1/2\"",
+    "max": "1\"",
+    "listed": [
+     "1/2\"",
+     "3/4\"",
+     "1\""
+    ],
+    "listedSource": "Product page",
+    "otherAllowed": false
+   },
+   "sizes": {
+    "min": "50\" x 87\"",
+    "max": "50\" x 87\"",
+    "listed": [
+     "50\" x 87\""
+    ],
+    "minW": null,
+    "minL": null,
+    "maxW": null,
+    "maxL": null,
+    "customAllowed": true,
+    "note": "Custom sizes available."
+   },
+   "colors": [
+    "Black core / Black liner"
+   ],
+   "colorNote": "Core black, liner black.",
+   "resources": [
+    {
+     "label": "RESILIENT MOUNT Sell Sheet",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/RESILIENT-MOUNT-Sell-Sheet-1.pdf"
+    },
+    {
+     "label": "Resilient Cutting Guidelines – ZUND",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/Resilient-Cutting-Guidelines-ZUND.pdf"
+    },
+    {
+     "label": "Resilient Cutting Guidelines – KONGSBERG",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/Resilient-Cutting-Guidelines-KONGSBERG.pdf"
+    },
+    {
+     "label": "Resilient Cutting Guidelines – COLEX",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/Resilient-Cutting-Guidelines-COLEX.pdf"
+    },
+    {
+     "label": "Resilient FAQ",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/resilient-faq.pdf"
+    }
+   ],
+   "dataSheet": "https://gilmanbrothers.com/wp-content/uploads/2024/10/RESILIENT-MOUNT-Sell-Sheet-1.pdf",
+   "notes": [],
+   "variants": [],
+   "constraints": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [
+    "wall-decor"
+   ],
+   "alsoFits": [
+    "mount-frame"
+   ]
+  },
+  {
+   "id": "resilient-align",
+   "name": "Resilient® ALIGN®",
+   "tagline": "Permanent Non-Tack PSA Mounting Board",
+   "url": "https://gilmanbrothers.com/resilient-align/",
+   "family": "Soft Foam Board",
+   "description": "Pressure-activated adhesive mounting board with a slidable non-tack surface for easy repositioning; air-release technology. Patent pending.",
+   "benefits": [
+    "Slidable, pressure-activated adhesive",
+    "Air-release – bubble-free",
+    "Spring-Back technology",
+    "Display within minutes; display-ready edge",
+    "27% lighter",
+    "Moisture resistant",
+    "Pairs with ADHERE™ removable wall fastener"
+   ],
+   "idealFor": [
+    "Photo mounting",
+    "Direct Print Wall Décor",
+    "3D Signage"
+   ],
+   "gauges": {
+    "min": "1/2\"",
+    "max": "3/4\"",
+    "listed": [
+     "1/2\"",
+     "3/4\""
+    ],
+    "listedSource": "Product page",
+    "otherAllowed": false
+   },
+   "sizes": {
+    "min": "50\" x 87\"",
+    "max": "50\" x 87\"",
+    "listed": [
+     "50\" x 87\""
+    ],
+    "minW": null,
+    "minL": null,
+    "maxW": null,
+    "maxL": null,
+    "customAllowed": true,
+    "note": "Custom sizes available."
+   },
+   "colors": [
+    "Black core / White liner"
+   ],
+   "colorNote": "Core black, liner white (as stated on page).",
+   "resources": [
+    {
+     "label": "RESILIENT ALIGN Sell Sheet",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/RESILIENT-ALIGN-Sell-Sheet-2.pdf"
+    },
+    {
+     "label": "Resilient ALIGN Instructions",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2026/07/Instructions-ALIGN.pdf"
+    },
+    {
+     "label": "Resilient Align Commercial Packet",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/Resilient-Align-Commercial-Packet-External.pdf"
+    },
+    {
+     "label": "Resilient Align Cutting Guidelines – ZUND",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/Resilient-Align-Cutting-Guidelines-ZUND.pdf"
+    },
+    {
+     "label": "Resilient FAQ",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/resilient-faq.pdf"
+    }
+   ],
+   "dataSheet": "https://gilmanbrothers.com/wp-content/uploads/2024/10/RESILIENT-ALIGN-Sell-Sheet-2.pdf",
+   "notes": [
+    "ALIGN page lists the same 'Applications' as PRINT (Direct Print Wall Décor, 3D Signage) – possibly copy-paste."
+   ],
+   "variants": [],
+   "constraints": [],
+   "units": [
+    "sheets",
+    "cases",
+    "skids",
+    "truckload"
+   ],
+   "applications": [
+    "wall-decor"
+   ],
+   "alsoFits": [
+    "mount-frame"
+   ]
+  },
+  {
+   "id": "adhere",
+   "name": "ADHERE™",
+   "tagline": "Removable Wall Fastener",
+   "url": "https://gilmanbrothers.com/adhere/",
+   "family": "Hanging System",
+   "description": "Removable PSA foam side + permanent PSA foam side; damage-free removal from painted walls, painted cinderblock and finished wood.",
+   "benefits": [
+    "Holds up to ½ lb per sq. in. on clean receptive surfaces",
+    "0.110\" thick",
+    "0°F–130°F",
+    "Interior use only",
+    "Repositionable 3–5 times"
+   ],
+   "idealFor": [
+    "Wall Décor",
+    "3D Signage",
+    "Hanging mounted prints"
+   ],
+   "gauges": {
+    "min": "0.110\"",
+    "max": "0.110\"",
+    "listed": [
+     "0.110\""
+    ],
+    "listedSource": "Product page",
+    "otherAllowed": false
+   },
+   "sizes": {
+    "min": "1\" x 4\"",
+    "max": "4\" x 4\"",
+    "listed": [
+     "2\" x 2\"",
+     "3\" x 3\"",
+     "4\" x 4\"",
+     "1\" x 4\""
+    ],
+    "minW": null,
+    "minL": null,
+    "maxW": null,
+    "maxL": null,
+    "customAllowed": true,
+    "note": "Custom sizes available."
+   },
+   "colors": [
+    "Standard (not stated)"
+   ],
+   "colorNote": "Color not stated on site.",
+   "units": [
+    "pieces",
+    "sheets/packs (specify)"
+   ],
+   "resources": [
+    {
+     "label": "ADHERE Sell Sheet",
+     "url": "https://gilmanbrothers.com/wp-content/uploads/2025/06/ADHERE-Sell-Sheet.pdf"
+    }
+   ],
+   "dataSheet": "https://gilmanbrothers.com/wp-content/uploads/2025/06/ADHERE-Sell-Sheet.pdf",
+   "notes": [
+    "Pack quantity / how tabs are sold is not stated.",
+    "Not listed on the Our Products page; only on Wall Décor page."
+   ],
+   "variants": [],
+   "constraints": [],
+   "applications": [
+    "wall-decor"
+   ],
+   "alsoFits": []
+  }
+ ],
+ "resourceLibrary": {
+  "Product line": [
+   {
+    "label": "Gilman Line Card – Keeping it Simple",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2026/07/Gilman-Line-Card-Keeping-it-Simple.pdf"
+   },
+   {
+    "label": "Product Master Brochure",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2026/07/PRODUCT-MASTER-BROCHURE.pdf"
+   },
+   {
+    "label": "Gilman Comparison Chart (vs. competitor boards)",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2026/07/Gilman-Comparison-Chart.pdf"
+   },
+   {
+    "label": "Triangle of Options",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2026/07/TRIANGLE-OF-OPTIONS.pdf"
+   }
+  ],
+  "Cutting guidelines": [
+   {
+    "label": "Zünd",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/CUTTING-GUIDELINES-ZUND.pdf"
+   },
+   {
+    "label": "Kongsberg",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/CUTTING-GUIDELINES-KONGSBERG.pdf"
+   },
+   {
+    "label": "MultiCam",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/CuttingGuidelines-MultiCam.pdf"
+   },
+   {
+    "label": "Onsrud",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/CuttingGuidelines-ONSRUD.pdf"
+   },
+   {
+    "label": "Elitron",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/CUTTING-GUIDELINES-ELITRON.pdf"
+   },
+   {
+    "label": "EAGLECELL cutting",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2026/07/EAGLECELL-cutting-guidelines.pdf"
+   },
+   {
+    "label": "Resilient – Zünd (image)",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/Resilient-Cutting-Guidelines-ZUND-1.jpg"
+   },
+   {
+    "label": "Resilient – Kongsberg",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/Resilient-Cutting-Guidelines-KONGSBERG.pdf"
+   },
+   {
+    "label": "Resilient – Colex",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/Resilient-Cutting-Guidelines-COLEX.pdf"
+   }
+  ],
+  "Printing guidelines": [
+   {
+    "label": "Fujifilm",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/PRINTING-GUIDELINES-FUJIFILM.pdf"
+   },
+   {
+    "label": "HP R2000",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/printing-guidelines-hp.pdf"
+   },
+   {
+    "label": "Canon Océ Arizona – Technical Bulletin",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/TechnicalBulletin-CanonOceArizonaPrinters-122115.pdf"
+   }
+  ],
+  "Instructions": [
+   {
+    "label": "InSite Heat Activated",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Insite-Heat-Activated-Instructions.pdf"
+   },
+   {
+    "label": "InSite Reveal – Mounting",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/Insite-Reveal-Directions-for-Mounting.pdf"
+   },
+   {
+    "label": "InSite Self Adhesive",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Instructions-InSiteSA.pdf"
+   },
+   {
+    "label": "Resilient ALIGN",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2026/07/Instructions-ALIGN.pdf"
+   },
+   {
+    "label": "MountCor",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/MountCor-Instructions.pdf"
+   },
+   {
+    "label": "MountCor Canvas",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/MountCor-Canvas-Instructions.pdf"
+   }
+  ],
+  "Technical specifications": [
+   {
+    "label": "INFINITY",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2025/04/Technical-Specifications-INFINITY-2.pdf"
+   },
+   {
+    "label": "InSite",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Technical-Specifications-Insite.pdf"
+   },
+   {
+    "label": "Ryno Board",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Technical-Specifications-Ryno-Board.pdf"
+   },
+   {
+    "label": "EAGLECELL Tolerances",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2026/07/EAGLECELL-Tolerances-1.pdf"
+   }
+  ],
+  "Essential solutions": [
+   {
+    "label": "Catalog – Essential Structural Options",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/10/CATALOG-ESSENTIAL-STRUCTURAL-OPTIONS.pdf"
+   },
+   {
+    "label": "Capability Statement",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2026/03/CapabilityStatement.pdf"
+   },
+   {
+    "label": "Temporary Beds and Partitions",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2025/01/Temporary-Beds-and-Partitions-2025-1.pdf"
+   }
+  ],
+  "Forms & policies": [
+   {
+    "label": "Sample Order Form (.doc)",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Gilman-Brothers-SAMPLE-ORDER-FORM.doc"
+   },
+   {
+    "label": "Credit Application",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/Gilman-Brothers-Credit-Application.pdf"
+   },
+   {
+    "label": "Claim & Return Authorization Form (.doc)",
+    "url": "https://gilmanbrothers.com/wp-content/uploads/2024/03/GILMAN-BROTHERS-RMA-FORM.doc"
+   },
+   {
+    "label": "Policies page",
+    "url": "https://gilmanbrothers.com/policies/"
+   }
+  ]
+ },
+ "gallery": [
+  {
+   "title": "Trade shows: PRINTING United 2026 – Retro Pop Culture",
+   "detail": "EAGLECELL, INFINITY and RESILIENT in custom exhibit props",
+   "products": [
+    "eaglecell",
+    "infinity",
+    "resilient-print"
+   ],
+   "url": "https://gilmanbrothers.com/portfolio/"
+  },
+  {
+   "title": "PRINTING United 2022 – Rock & Roll booth",
+   "detail": "Stage, guitars and amps from RESILIENT, INFINITY and EAGLECELL",
+   "products": [
+    "resilient-print",
+    "infinity",
+    "eaglecell"
+   ],
+   "url": "https://gilmanbrothers.com/portfolio/"
+  },
+  {
+   "title": "GlobalShop 2019 – Chicago booth",
+   "detail": "'Brick and steel' booth and POP counters in INFINITY and EAGLECELL",
+   "products": [
+    "infinity",
+    "eaglecell"
+   ],
+   "url": "https://gilmanbrothers.com/portfolio/"
+  },
+  {
+   "title": "GlobalShop 2017 – Giant Coffee Shop",
+   "detail": "3D-bent INFINITY cups and creamers, EAGLECELL sleeve",
+   "products": [
+    "infinity",
+    "eaglecell",
+    "insite-reveal"
+   ],
+   "url": "https://gilmanbrothers.com/portfolio/"
+  },
+  {
+   "title": "GlobalShop 2016 – 80s Rock & Roll",
+   "detail": "Entire booth incl. tour bus made from INFINITY",
+   "products": [
+    "infinity"
+   ],
+   "url": "https://gilmanbrothers.com/portfolio/"
+  },
+  {
+   "title": "Artisan Oil Display",
+   "detail": "1/2\" EAGLECELL W/K/W, V-grooved, rolled and folded – no adhesive",
+   "products": [
+    "eaglecell"
+   ],
+   "url": "https://gilmanbrothers.com/portfolio/"
+  },
+  {
+   "title": "Retail Displays / Boxes & Totes",
+   "detail": "3/16\" INFINITY, V-grooved, rolled & folded",
+   "products": [
+    "infinity"
+   ],
+   "url": "https://gilmanbrothers.com/portfolio/"
+  },
+  {
+   "title": "Phone Podium",
+   "detail": "3/16\" INFINITY with magnetic receptive backer and LED backlighting",
+   "products": [
+    "infinity"
+   ],
+   "url": "https://gilmanbrothers.com/portfolio/"
+  },
+  {
+   "title": "EAGLECELL Bench",
+   "detail": "Eco-friendly all-paper bench",
+   "products": [
+    "eaglecell"
+   ],
+   "url": "https://gilmanbrothers.com/portfolio/"
+  },
+  {
+   "title": "Essential Solutions",
+   "detail": "INFINITY temporary medical beds, partitions and a Vaccine Transport System",
+   "products": [
+    "infinity"
+   ],
+   "url": "https://gilmanbrothers.com/portfolio/"
+  }
+ ],
+ "notListedInApp": [
+  {
+   "name": "LitePrint FR",
+   "why": "Only in Product Master Brochure (Rev 1/5/23): flame-retardant EPS foamboard, 3/16\", white, 48\"x96\", FR certified by CA State Fire Marshal. No product page."
+  },
+  {
+   "name": "INFINITY® Canvas Textured Foam Board",
+   "why": "Mentioned in a news post (HP booth); no product page."
+  },
+  {
+   "name": "InSite Heat Activated Low Temp",
+   "why": "Only an SDS exists in the Resource Library."
+  }
+ ]
+}
