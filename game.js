@@ -67,9 +67,13 @@
     const d = document.createElement('div'); d.style.cssText = 'position:fixed;top:0;left:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden';
     document.body.appendChild(d); const cs = getComputedStyle(d); safeTop = parseFloat(cs.paddingTop) || 0; safeBot = parseFloat(cs.paddingBottom) || 0; d.remove();
   }
+  let booted = false;
   function resize() {
     W = window.innerWidth; H = window.innerHeight; DPR = Math.min(IS_ANDROID ? 2 : 3, window.devicePixelRatio || 1);
-    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); measureSafe(); layoutBottom();
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); measureSafe();
+    document.documentElement.classList.toggle('land', LANDSCAPE());
+    if (booted) sizeBottom(); layoutBottom(); // bars re-measured for the new orientation BEFORE the ground line is derived from them
+    if (S && S.stack) { const tp = S.stack[S.stack.length - 1]; S.camT = camTarget(tp.y + tp.t); } // re-aim the camera for the new layout (same world, same anchor)
   }
 
   // ---------- state ----------
@@ -81,12 +85,20 @@
   const ADHERE_EVERY = 3, ADHERE_MAX = 2, ADHERE_POP = 'ADHERE™ — holds up to ½ lb/sq in, removes damage-free';
   // ---------- scale (hosts vs. boards, closer to real life) ----------
   // hosts: ~1.5x the v2 size, integer device-pixel scaling so the pixel art stays crisp
+  // ---------- one scene, one anchor ----------
+  // The stack, pallet, floor, extrusion line and hosts all live in ONE scene: x in scene px (0..SW, centred on screen with
+  // sceneX()), y in world units measured up from the warehouse floor and mapped to the screen by sy() with the single camera
+  // offset S.cam. SW is fixed per game so a mid-game rotation re-centres the scene instead of pulling it apart.
+  const LANDSCAPE = () => W > H && H < 560;
+  const sceneW0 = () => Math.min(W, 440);
+  const sceneW = () => (S && S.SW) || sceneW0();
+  const sceneX = () => Math.round((W - sceneW()) / 2);
   function geo() {
-    const base = W < 380 ? 1.3 : 1.5, sc = Math.max(1, Math.round(base * 1.5 * DPR) / DPR), hw = SPR.W * sc, hh = SPR.H * sc;
+    const SWv = sceneW(), base = LANDSCAPE() ? 1.0 : SWv < 380 ? 1.3 : 1.5, sc = Math.max(1, Math.round(base * 1.5 * DPR) / DPR), hw = SPR.W * sc, hh = SPR.H * sc;
     const palletT = Math.max(14, Math.round(hh / 7)); // a pallet is ~1/12 a person; ~1/7 here so the deck still reads
     // starting board ~2-2.5x a host's height, but never under 55% of the screen width (playability)
-    const bw = Math.round(Math.min(250, Math.max(W * 0.55, Math.min(2.5 * hh, W - 2 * hw - 30))));
-    const oldW = Math.round(Math.min(W * 0.6, 250)); // v2 width: speed and px tolerances scale by bw/oldW so difficulty is unchanged
+    const bw = Math.round(Math.min(250, Math.max(SWv * 0.55, Math.min(2.5 * hh, SWv - 2 * hw - 30))));
+    const oldW = Math.round(Math.min(SWv * 0.6, 250)); // v2 width: speed and px tolerances scale by bw/oldW so difficulty is unchanged
     // board thickness: ONE px-per-inch for every product and gauge (= hh/6, i.e. thickness exaggerated 12x vs. a 6 ft host)
     const ppi = hh / 6;
     return { sc, hw, hh, palletT, bw, k: bw / oldW, ppi };
@@ -95,19 +107,22 @@
   const thickFor = g => g.inches * ((S && S.ppi) || geo().ppi); // exactly proportional to the real gauge
   const K = () => (S && S.k) || geo().k;
   let bottomUI = 0; // px reserved at the bottom for the spotlight ticker
-  function layoutBottom() { const t = $('bottomBar'); bottomUI = t && !t.hidden ? H - t.getBoundingClientRect().top : safeBot; }
-  const groundY = () => { const g = geo(); return H - bottomUI - Math.max(24, Math.round(g.hh / 2 - g.palletT + 30)); }; // hosts stand in front of the pallet; their feet + names stay above the fact bar // screen y of world 0 (floor the pallet and hosts stand on)
+  function layoutBottom() { const t = $('bottomBar'), k = $('spotTicker'), hud = $('hud'); let top = t && !t.hidden ? t.getBoundingClientRect().top : H - safeBot;
+    if (LANDSCAPE() && k && hud && !hud.hidden) { const r = k.getBoundingClientRect(); if (r.height) top = Math.min(top, r.top); }
+    bottomUI = H - top; }
+  const palletTH = () => (S ? S.stack[0].t : geo().palletT);
+  const groundY = () => { const g = geo(); return H - bottomUI - Math.max(24, Math.round(g.hh / 2 - palletTH() + 30)); }; // hosts stand in front of the pallet; their feet + names stay above the fact bar // screen y of world 0 (floor the pallet and hosts stand on)
 
   function lookFor(p) {
     const v = pick(p.look.variants);
     return { face: v[0], core: v[1], backing: p.look.backingVariants ? pick(p.look.backingVariants) : p.look.backing || null };
   }
   function newGame() {
-    const G = geo(), bw = G.bw;
+    const G = geo(), bw = G.bw, SW = sceneW0();
     S = {
-      k: G.k, ppi: G.ppi, playT: 0, bill: null, billCount: 0, billNext: qs.has('nobill') ? Infinity : T.BILL_MIN + rnd() * (T.BILL_MAX - T.BILL_MIN), /* ?nobill: tests force the event via a hook */ poofs: [], adhere: 0, adhereArmed: false, perfStreak: 0, rescueUsed: false,
+      SW, k: G.k, ppi: G.ppi, playT: 0, bill: null, billCount: 0, billNext: qs.has('nobill') ? Infinity : T.BILL_MIN + rnd() * (T.BILL_MAX - T.BILL_MIN), /* ?nobill: tests force the event via a hook */ poofs: [], adhere: 0, adhereArmed: false, perfStreak: 0, rescueUsed: false,
       mode: 'play', t: 0, score: 0, floors: 0, height: 0, combo: 0, perfects: 0, maxCombo: 0,
-      stack: [{ x: (W - bw) / 2, w: bw, y: 0, t: G.palletT, base: true }], extrudeLog: [], palletRect: null,
+      stack: [{ x: (SW - bw) / 2, w: bw, y: 0, t: G.palletT, base: true }], extrudeLog: [], palletRect: null,
       falling: [], parts: [], flashes: [], cam: 0, camT: 0, shake: 0,
       heatNext: false, quickBond: 0, retryAvail: false, bonusNext: false,
       rain: 0, rainDrops: [], unlockedNow: [], hostState: [{ anim: 'idle', t: 0, bubble: null }, { anim: 'idle', t: 0, bubble: null }],
@@ -117,7 +132,7 @@
   }
   function top() { return S.stack[S.stack.length - 1]; }
   function speedFor(p) {
-    let s = Math.min(T.SPEED_MAX, 1 + S.floors * T.SPEED_STEP) * T.BASE_SPEED * Math.min(W, 520) * K();
+    let s = Math.min(T.SPEED_MAX, 1 + S.floors * T.SPEED_STEP) * T.BASE_SPEED * Math.min(sceneW(), 520) * K();
     const id = p.trait.id;
     if (id === 'featherweight') s *= 0.7;
     if (id === 'heavy-duty') s *= 1.2;
@@ -203,17 +218,22 @@
     spawn();
   }
   function camTarget(topY) { // keep the stack top ~45% down the free play area between the HUD and the ground
-    const hb = $('hud').getBoundingClientRect(), hudB = (hb.height ? hb.bottom : safeTop + 150) + Math.max(64, Math.round(geo().hh * 1.05 + 26)), // room for the extruder hopper + name plate
-       g = groundY(), target = hudB + Math.max(40, g - hudB) * 0.35;
+    const g = groundY(), E = geo().hh, hopper = Math.round(E * 0.78) + 24; // extruder hopper + name plate above the stack top
+    let hudB;
+    if (LANDSCAPE()) { // the hopper sits beside the centred HUD column, so only the score/pill above the stack and the screen top matter
+      const sb = $('hud').querySelector('.scorebox').getBoundingClientRect(), nb = $('nowBoard').getBoundingClientRect();
+      hudB = Math.max(sb.bottom || 0, nb.height ? nb.bottom : 0, safeTop) + 34; // + the "Perfect ×N" line above the moving board hudB = Math.max(hudB, safeTop + hopper);
+    } else { const hb = $('hud').getBoundingClientRect(); hudB = (hb.height ? hb.bottom : safeTop + 150) + Math.max(64, Math.round(E * 1.05 + 26)); }
+    const target = Math.min(g - 24, hudB + Math.max(40, g - hudB) * 0.35); // never below the pallet: an empty stack always starts at cam 0
     return Math.max(0, topY - (g - target));
   }
   function grow(board, px) {
     const nw = Math.min(S.maxW, board.w + px); if (nw <= board.w) return;
-    board.x -= (nw - board.w) / 2; board.w = nw; board.x = Math.max(-T.DEPTH_X, Math.min(W - nw, board.x)); sfx.grow();
+    board.x -= (nw - board.w) / 2; board.w = nw; board.x = Math.max(-T.DEPTH_X, Math.min(sceneW() - nw, board.x)); sfx.grow();
     S.flashes.push({ kind: 'grow', b: board, t: 0.4 });
   }
   function mkPiece(x, w, m, y) {
-    return { x, w, y: y == null ? m.y : y, t: m.t, look: m.look, p: m.p, vx: (x + w / 2 < W / 2 ? -1 : 1) * (40 + rnd() * 60), vy: 60, rot: 0, vr: (rnd() - 0.5) * 5 };
+    return { x, w, y: y == null ? m.y : y, t: m.t, look: m.look, p: m.p, vx: (x + w / 2 < sceneW() / 2 ? -1 : 1) * (40 + rnd() * 60), vy: 60, rot: 0, vr: (rnd() - 0.5) * 5 };
   }
   function sliced(r, m, board) {
     if (r.cut && r.cut.w > 0.5) {
@@ -264,18 +284,21 @@
 
   // ---------- WIDWAW: Bill VanHorn event ----------
   const boost = () => (S && S.bill && S.bill.on ? T.BILL_BOOST : 1); // applied on top of the board's own speed, so the exit restores it exactly
-  function hostSlot() { const G = geo(); return { x: W - 8 - G.hw + G.hw / 2, y: Math.round(groundY() - (S ? S.stack[0].t : G.palletT) - G.hh / 2) }; }
+  // hosts stand in front of the pallet with their midsection on its top deck: world y of the waist = pallet top (stack[0].t).
+  // Same anchor for Evan, Cyrus and Bill, scrolled by the same camera as the stack.
+  function hostPos(i) { const G = geo(), x = i === 0 ? 8 : sceneW() - 8 - G.hw, wy = palletTH(); return { x, wy, y: Math.round((S ? sy(wy) : groundY() - wy) - G.hh / 2), w: G.hw, h: G.hh }; }
+  function hostSlot() { const h = hostPos(1); return { x: h.x + h.w / 2, wy: h.wy }; }
   function startBill() {
     if (!S || S.bill) return;
     S.bill = { t: 0, dur: T.BILL_DUR, on: true, phase: 'in', outT: 0 }; S.billCount++;
     const h = S.hostState[1]; h.anim = 'cheer'; h.t = 1.4; h.bubble = { text: 'WIDWAW', t: 2.4 };
-    const sl = hostSlot(); S.poofs.push({ x: sl.x, y: sl.y, t: 0 });
+    const sl = hostSlot(); S.poofs.push({ x: sl.x, wy: sl.wy, t: 0 });
     $('billBanner').hidden = false; updateBillBar(); sfx.widwaw(); AU.setFast(true); buzz([10, 30, 10]);
   }
   function endBill() {
     if (!S || !S.bill || !S.bill.on) return;
     S.bill.on = false; S.bill.phase = 'out'; S.bill.outT = 0; S.hostState[1].bubble = null; S.hostState[1].anim = 'idle';
-    const sl = hostSlot(); S.poofs.push({ x: sl.x, y: sl.y, t: 0 }); $('billBanner').hidden = true; sfx.billLeave(); AU.setFast(false);
+    const sl = hostSlot(); S.poofs.push({ x: sl.x, wy: sl.wy, t: 0 }); $('billBanner').hidden = true; sfx.billLeave(); AU.setFast(false);
   }
   function updateBill(dt) {
     const b = S.bill;
@@ -286,10 +309,10 @@
   function updateBillBar() { const b = S && S.bill; const el = $('billBar'); if (el && b) el.style.width = (Math.max(0, 1 - b.t / b.dur) * 100).toFixed(1) + '%'; }
   function drawPoofs() {
     for (const p of S.poofs) {
-      const k = p.t / T.POOF, a = 1 - k, r = 10 + k * 34;
+      const k = p.t / T.POOF, a = 1 - k, r = 10 + k * 34, py = sy(p.wy);
       ctx.save(); ctx.globalAlpha = a * 0.9; ctx.fillStyle = '#e9edf5';
-      for (let i = 0; i < 7; i++) { const an = i / 7 * Math.PI * 2; ctx.beginPath(); ctx.arc(p.x + Math.cos(an) * r * 0.7, p.y + Math.sin(an) * r * 0.5, 9 + 8 * (1 - k), 0, Math.PI * 2); ctx.fill(); }
-      ctx.fillStyle = '#f5c542'; for (let i = 0; i < 6; i++) { const an = i / 6 * Math.PI * 2 + 0.4; ctx.fillRect(p.x + Math.cos(an) * r * 1.2, p.y + Math.sin(an) * r * 0.9, 3, 3); }
+      for (let i = 0; i < 7; i++) { const an = i / 7 * Math.PI * 2; ctx.beginPath(); ctx.arc(p.x + Math.cos(an) * r * 0.7, py + Math.sin(an) * r * 0.5, 9 + 8 * (1 - k), 0, Math.PI * 2); ctx.fill(); }
+      ctx.fillStyle = '#f5c542'; for (let i = 0; i < 6; i++) { const an = i / 6 * Math.PI * 2 + 0.4; ctx.fillRect(p.x + Math.cos(an) * r * 1.2, py + Math.sin(an) * r * 0.9, 3, 3); }
       ctx.restore();
     }
   }
@@ -318,7 +341,7 @@
         if (e.t >= P && !e.cut) { e.cut = true; e.cutAt = e.t; sparks(T.DIE_X + 2, m.y + m.t / 2); sfx.cut(); buzz(6); }
         if (e.t >= P + T.EXTRUDE_CUT) { m.x = T.DIE_X; m.extrude = null; m.extruded = true; S.extrudeLog.push({ ms: performance.now() - e.start, sim: e.t, id: m.p.id }); }
       } else if (m.speed > 0) { m.x += m.dir * m.speed * boost() * dt;
-      const minX = T.DIE_X, maxX = W - m.w * 0.65;
+      const minX = T.DIE_X, maxX = sceneW() - m.w * 0.65;
       if (m.x > maxX) { m.x = maxX - (m.x - maxX); m.dir = -1; } else if (m.x < minX) { m.x = minX + (minX - m.x); m.dir = 1; } }
     }
     if (S.lineFlash > 0) S.lineFlash -= dt;
@@ -327,7 +350,7 @@
     for (let i = S.parts.length - 1; i >= 0; i--) { const p = S.parts[i]; p.t += dt; p.vy -= 600 * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.t > p.life) S.parts.splice(i, 1); }
     for (let i = S.flashes.length - 1; i >= 0; i--) { S.flashes[i].t -= dt; if (S.flashes[i].t <= 0) S.flashes.splice(i, 1); }
     if (S.rain > 0 || S.rainDrops.length) {
-      if (S.rain > 0) for (let i = 0; i < 4; i++) S.rainDrops.push({ x: rnd() * W, y: -10, v: 600 + rnd() * 300 });
+      if (S.rain > 0) for (let i = 0; i < 4; i++) S.rainDrops.push({ x: rnd() * W - sceneX(), y: -10, v: 600 + rnd() * 300 });
       for (let i = S.rainDrops.length - 1; i >= 0; i--) { const d = S.rainDrops[i]; d.y += d.v * dt; d.x -= 60 * dt; if (d.y > H) S.rainDrops.splice(i, 1); }
     }
     if (S.mode === 'dying') { S.overT -= dt; if (S.overT <= 0) gameOver(); }
@@ -382,7 +405,7 @@
   function drawPallet(b) {
     const yb = Math.round(sy(b.y)), yt = Math.round(sy(b.y + b.t)), x = Math.round(b.x - 8), w = Math.round(b.w + 16), DX = T.DEPTH_X, DY = T.DEPTH_Y;
     // warehouse floor
-    ctx.fillStyle = '#171a23'; ctx.fillRect(0, yb, W, H - yb + 400); ctx.fillStyle = '#2a2f3e'; ctx.fillRect(0, yb, W, 2);
+    const ox = sceneX(); ctx.fillStyle = '#171a23'; ctx.fillRect(-ox, yb, W, H - yb + 400); ctx.fillStyle = '#2a2f3e'; ctx.fillRect(-ox, yb, W, 2);
     ctx.fillStyle = '#00000055'; ctx.beginPath(); ctx.ellipse(x + w / 2 + DX / 2, yb + 3, w / 2 + 10, 5, 0, 0, Math.PI * 2); ctx.fill();
     // top deck surface (planks run front-to-back)
     ctx.fillStyle = WOOD.top; ctx.beginPath(); ctx.moveTo(x, yt); ctx.lineTo(x + w, yt); ctx.lineTo(x + w + DX, yt - DY); ctx.lineTo(x + DX, yt - DY); ctx.closePath(); ctx.fill();
@@ -405,6 +428,7 @@
     ctx.fillStyle = WOOD.face; ctx.fillRect(x, yb - bot, w, bot); ctx.fillStyle = WOOD.grain; for (let i = 6; i < w - 10; i += 23) ctx.fillRect(x + i, yb - bot + 2, 12, 1);
     ctx.fillStyle = '#00000040'; ctx.fillRect(x, yb - 1, w, 1);
     S.palletRect = { x, y: yt - DY, w: w + DX, h: yb - yt + DY };
+    S.palletTopY = yt; S.floorY = yb;
   }
   function drawLine(front) {
     // extrusion line pinned to the top of the stack (follows the camera); sized ~1-1.1x a host's height
@@ -444,7 +468,9 @@
     for (let j = 0; j < 3; j++) { ctx.beginPath(); for (let k = 0; k <= 10; k++) { const yy = bodyTop - 4 - k * 3, xx = 2 + j * 22 + Math.sin(now * 7 + k * 0.9 + j * 2) * 2.2; if (k) ctx.lineTo(xx, yy); else ctx.moveTo(xx, yy); } ctx.stroke(); }
     // stencilled product name plate
     if (S.lineName) {
-      ctx.font = '800 10px ui-monospace,Menlo,monospace'; const txt = S.lineName.toUpperCase(), tw = Math.min(ctx.measureText(txt).width, W * 0.55);
+      ctx.font = '800 10px ui-monospace,Menlo,monospace'; const txt = S.lineName.toUpperCase(); let cap = W * 0.55;
+      if (LANDSCAPE()) { const nb = $('nowBoard').getBoundingClientRect(); if (nb.width) cap = Math.min(cap, nb.left - sceneX() - 20); } // landscape: stay left of the HUD pill
+      const tw = Math.min(ctx.measureText(txt).width, Math.max(90, cap));
       const px = 4, py = hopTop - 20; ctx.fillStyle = '#20242f'; ctx.fillRect(px, py, tw + 12, 15); ctx.fillStyle = S.lineFlash > 0 ? '#ffd75e' : '#f5c54299'; ctx.fillRect(px, py + 14, tw + 12, 1);
       ctx.fillStyle = S.lineFlash > 0 ? '#ffd75e' : '#c9a647'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(txt, px + 6, py + 8, tw); ctx.textBaseline = 'alphabetic';
     }
@@ -458,10 +484,10 @@
       const st = S ? S.hostState[i] : { anim: 'idle' };
       const fr = st.anim === 'cheer' ? SPR.FRAMES.cheer[Math.floor(performance.now() / 180) % 2] : SPR.FRAMES.idle[Math.floor((performance.now() / 600 + i * 0.5)) % 2];
       // hosts stand so their vertical midpoint lines up with the pallet's top deck in the opening view
-      let x = i === 0 ? 8 : W - 8 - hw, y = Math.round(groundY() - (S ? S.stack[0].t : G.palletT) - hh / 2);
+      const hp = hostPos(i), x = hp.x, y = hp.y;
       // pop-in bounce: Bill on arrival, Cyrus on return
       const popT = i === 1 && b ? (b.on ? b.t : b.outT) : -1, popY = popT >= 0 && popT < T.POOF + 0.25 ? -Math.round(Math.abs(Math.sin(Math.min(1, popT / (T.POOF + 0.25)) * Math.PI * 1.5)) * 16 * (1 - popT / (T.POOF + 0.25))) : 0;
-      if (S) (S.hostRects || (S.hostRects = []))[i] = { x, y, w: hw, h: hh };
+      if (S) (S.hostRects || (S.hostRects = []))[i] = { x, y, w: hw, h: hh, ox: sceneX() };
       ctx.fillStyle = '#00000066'; ctx.beginPath(); ctx.ellipse(x + hw / 2, y + hh + 1, hw * 0.45, 3, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#2a2f3e'; ctx.fillRect(x - 4, y + hh + 2, hw + 8, 2);
       ctx.imageSmoothingEnabled = false; ctx.drawImage(SPR.frameCanvas(h, fr), Math.round(x), Math.round(y + popY), hw, hh); ctx.imageSmoothingEnabled = true;
@@ -471,11 +497,11 @@
   }
   function bubble(text, cx, by, side, a) {
     ctx.save(); ctx.globalAlpha = a; ctx.font = '700 13px -apple-system,system-ui,sans-serif';
-    const tw = Math.min(ctx.measureText(text).width, W * 0.42), bw = tw + 16, bh = 26;
+    const tw = Math.min(ctx.measureText(text).width, W * 0.42), bw = tw + 16, bh = 26, L = -sceneX(), Rr = W - sceneX();
     // keep each bubble on its own side, clear of the stack and of the other host's bubble, and on screen
     const tp = S && top(), stL = tp ? tp.x - 4 : W / 2, stR = tp ? tp.x + tp.w + T.DEPTH_X + 4 : W / 2;
-    let bx = side === 'left' ? Math.max(4, Math.min(cx - 18, stL - bw)) : Math.min(W - 4 - bw, Math.max(cx + 18 - bw, stR));
-    bx = Math.max(4, Math.min(W - 4 - bw, bx)); let y = Math.max(4, by - bh - 8);
+    let bx = side === 'left' ? Math.max(L + 4, Math.min(cx - 18, stL - bw)) : Math.min(Rr - 4 - bw, Math.max(cx + 18 - bw, stR));
+    bx = Math.max(L + 4, Math.min(Rr - 4 - bw, bx)); let y = Math.max(4, Math.min(by - bh - 8, H - bottomUI - bh - 12)); // hosts scrolled off the bottom: keep the line on screen
     if (tp && bx < stR && bx + bw > stL) { const stTop = sy(tp.y + tp.t) - T.DEPTH_Y; y = Math.min(y, stTop - bh - 10); } // narrow screens: lift it clear of the stack
     if (S) S.stackTopY = tp ? sy(tp.y + tp.t) - T.DEPTH_Y : H;
     if (S) (S.bubbleRects || (S.bubbleRects = {}))[side] = { x: bx, y, w: bw, h: bh, text };
@@ -492,6 +518,7 @@
     if (!S) return;
     ctx.save();
     if (S.shake) ctx.translate((Math.random() - 0.5) * S.shake, (Math.random() - 0.5) * S.shake);
+    ctx.translate(sceneX(), 0); // centre the scene; everything below shares this x offset and the sy() camera
     drawLine(false);
     ctx.fillStyle = '#ffffff08'; ctx.font = '600 11px system-ui,sans-serif'; ctx.textAlign = 'left';
     for (const b of S.stack) {
@@ -507,7 +534,7 @@
     }
     if (S.moving) {
       const m = S.moving;
-      if (m.extrude) { ctx.save(); ctx.beginPath(); ctx.rect(T.DIE_X, -10, W, H + 20); ctx.clip(); drawBoard(m.x, sy(m.y), m.w, m.t, m.look, m.p, { bonus: m.bonus }); ctx.restore(); }
+      if (m.extrude) { ctx.save(); ctx.beginPath(); ctx.rect(T.DIE_X, -10, W + sceneW(), H + 20); ctx.clip(); drawBoard(m.x, sy(m.y), m.w, m.t, m.look, m.p, { bonus: m.bonus }); ctx.restore(); }
       else drawBoard(m.x, sy(m.y), m.w, m.t, m.look, m.p, { bonus: m.bonus });
     }
     drawLine(true);
@@ -520,9 +547,9 @@
     for (const p of S.parts) { ctx.globalAlpha = Math.max(0, 1 - p.t / p.life); ctx.fillStyle = p.col; ctx.fillRect(p.x - 2, sy(p.y) - 2, 4, 4); }
     ctx.globalAlpha = 1;
     if (S.rainDrops.length) { ctx.strokeStyle = '#8fb8ff66'; ctx.lineWidth = 1.2; ctx.beginPath(); for (const d of S.rainDrops) { ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + 4, d.y - 14); } ctx.stroke(); }
-    if (S.combo >= 2 && S.mode === 'play') { ctx.fillStyle = '#f5c542'; ctx.font = '800 15px -apple-system,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Perfect ×' + S.combo, W / 2, (S.moving ? sy(S.moving.y) - S.moving.t - T.DEPTH_Y - 18 : H * 0.35)); }
-    ctx.restore();
+    if (S.combo >= 2 && S.mode === 'play') { ctx.fillStyle = '#f5c542'; ctx.font = '800 15px -apple-system,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Perfect ×' + S.combo, sceneW() / 2, (S.moving ? sy(S.moving.y) - S.moving.t - T.DEPTH_Y - 18 : H * 0.35)); }
     drawHosts(); drawPoofs();
+    ctx.restore();
   }
 
   // ---------- loop ----------
@@ -713,7 +740,7 @@
     for (const id of ['startLogo', 'overLogo']) { $(id).src = CFG.BRAND_LOGO; $(id).alt = CFG.BRAND_NAME + ' logo'; }
     { const names = PRODUCTS.map(p => p.name); $('legalProducts').textContent = names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; }
     $('footBrand').textContent = `· Featuring ${CFG.BRAND_NAME} foam boards`;
-    drawHostsInto($('startHosts'), 'present'); renderCards(); sizeBottom(); spotRender(); spotSchedule(); window.addEventListener('resize', sizeBottom);
+    drawHostsInto($('startHosts'), 'present'); renderCards(); booted = true; sizeBottom(); layoutBottom(); spotRender(); spotSchedule();
     if (qs.has('sprites')) {
       const sh = $('spriteSheet'); sh.hidden = false;
       CFG.HOSTS.forEach(h => ['idle A', 'idle B', 'cheer A', 'cheer B'].forEach((lbl, fr) => {
@@ -730,7 +757,12 @@
     setMovingX(x) { if (S && S.moving) S.moving.x = x; }, setProduct(id, gl) { if (S && S.moving) { const p = productById[id]; S.moving.p = p; S.moving.look = lookFor(p); const g = (gl && p.gauges.find(x => x.label === gl)) || p.gauges[0]; S.moving.gauge = g; S.moving.t = thickFor(g); S.lineName = p.name + ' · ' + g.label; S.moving.speed = speedFor(p); } },
     spot: { next: spotAdvance, render: spotRender, durationFor, get id() { return curP().id; }, get fact() { return curF() && curF().id; }, get shownAt() { return spot.shownAt; }, history: spot.history, bags: () => ({ p: pBag.st, f: fBag.st }) }, facts: FACTS, layoutBottom,
     finishExtrusion() { return new Promise(r => { const c = () => (!S || !S.moving || !S.moving.extrude) ? r() : requestAnimationFrame(c); c(); }); },
-    freeze() { if (S && S.moving) S.moving.speed = 0; }, collection: () => [...collection],
+    freeze() { if (S && S.moving) S.moving.speed = 0; },
+    align() { // screen-space alignment snapshot (scene x offset applied) for the v6 anchor tests
+      if (!S || !S.hostRects || S.palletTopY == null) return null; const ox = sceneX(), pr = S.palletRect;
+      return { W, H, cam: S.cam, camT: S.camT, floors: S.stack.length - 1, palletTop: S.palletTopY, floorY: S.floorY, palletL: pr.x + ox, palletR: pr.x + pr.w + ox, bottomUI, slot1: S.slot1,
+        hosts: S.hostRects.map(h => ({ x: h.x + h.ox, w: h.w, mid: h.y + h.h / 2, top: h.y })), stackL: S.stack[S.stack.length - 1].x + ox };
+    }, collection: () => [...collection],
   };
   boot();
 })();

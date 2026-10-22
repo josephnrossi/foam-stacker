@@ -144,3 +144,11 @@ h2{margin:0;font-size:28px;font-weight:800}
 .snd-row .icon-btn{width:44px;height:44px;font-size:17px}
 .foot-row .foot{white-space:nowrap}
 @media (max-width:430px){.foot-row #footBrand{display:none}}
+/* v6 landscape (short + wide): product trivia moves into the bottom band (left), company history beside it (right),
+   so the stack, pallet and hosts get the full height between the score and the band */
+html.land #spotTicker{position:fixed;left:calc(var(--sal) + 6px);bottom:calc(var(--sab) + 4px);width:calc(58% - var(--sal) - 10px);margin:0;box-sizing:border-box;overflow:hidden}
+html.land #bottomBar{left:58%;padding-left:4px;justify-content:flex-end;min-height:0}
+html.land #deckBlurb{max-width:min(60vw,420px)}
+html.land #billBanner{position:fixed;top:auto;transform:none;animation:none;left:calc(var(--sal) + 6px);bottom:calc(var(--sab) + 4px);width:calc(58% - var(--sal) - 10px);box-sizing:border-box;margin:0;z-index:6}
+html.land #hud:has(#billBanner:not([hidden])) #spotTicker{visibility:hidden}
+html.land .screen:not(.scroll){justify-content:flex-start;overflow-y:auto;-webkit-overflow-scrolling:touch} /* short landscape: menus scroll so every button stays reachable */

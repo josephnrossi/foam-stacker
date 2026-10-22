@@ -1,4 +1,4 @@
-const CACHE = 'fbs-v5';
+const CACHE = 'fbs-v6';
 const ASSETS = ['./', 'index.html', 'styles.css', 'config.js', 'products.js', 'sprites.js', 'game.js', 'audio.js', 'facts.js', 'manifest.json',
   'assets/gilman-logo.png', 'assets/gilman-emblem.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/icon-maskable-192.png', 'icons/icon-maskable-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });

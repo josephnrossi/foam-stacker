@@ -5,7 +5,7 @@ const BASE = process.env.BASE || 'http://localhost:8833/';
 const SHOTS = process.env.SHOTS || __dirname + '/../shots';
 const CAT = JSON.parse(fs.readFileSync(__dirname + '/../tools/catalog-source.json', 'utf8'));
 fs.mkdirSync(SHOTS, { recursive: true });
-let pass = 0, fail = 0; const results = []; const perfLog = [];
+let pass = 0, fail = 0; const results = []; const perfLog = []; const skips = [];
 function ok(name, cond, extra) { if (cond) { pass++; results.push('PASS ' + name); } else { fail++; results.push('FAIL ' + name + (extra ? ' :: ' + JSON.stringify(extra) : '')); } }
 
 const noOverflow = p => p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1 && document.body.scrollWidth <= window.innerWidth + 1);
@@ -47,6 +47,8 @@ async function suite(browserType, deviceName, tag) {
   p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
   const touch = !!opts.hasTouch;
   const T = n => `${tag}: ${n}`;
+  const LAND = tag.endsWith('-land'); // landscape pass: menus scroll instead of fitting; gameplay uses the bottom-band trivia layout
+  const okP = (n, c, info) => LAND ? skips.push(n) : ok(n, c, info);
 
   await p.goto(BASE + '?seed=7&nospot&nobill'); await p.waitForTimeout(600);
   const au0 = await p.evaluate(() => ({ unlocked: window.FBS_AUDIO.state.unlocked, hasCtx: !!window.FBS_AUDIO.state.ctx }));
@@ -59,7 +61,7 @@ async function suite(browserType, deviceName, tag) {
   ok(T('hosts on start screen'), (await p.$$eval('#startHosts figure', fs => fs.map(f => f.textContent))).join('|') === 'Evan Gilman|Cyrus Gilman');
   ok(T('start: tap targets >= 44'), (await smallTargets(p)).length === 0, await smallTargets(p));
   ok(T('start: no overflow'), await noOverflow(p));
-  ok(T('start: buttons on screen'), (await offscreen(p)).length === 0, await offscreen(p));
+  okP(T('start: buttons on screen'), (await offscreen(p)).length === 0, await offscreen(p));
 
   // --- duplicate audit (content) ---
   const STOP = new Set('a an the and or of for to in on with by is it its at as that this from per your you can be are into'.split(' '));
@@ -107,8 +109,8 @@ async function suite(browserType, deviceName, tag) {
   ok(T('facts shuffle-bag covers every fact'), new Set(fids.slice(0, 2 * facts.length > 64 ? 64 : 2 * facts.length)).size === facts.length);
   const startFit = [];
   for (let k = 0; k < 16; k++) { await p.evaluate(() => window.__fbs.spot.next()); for (const sel of ['#spotStart', '#factStart']) { const f = await fitCheck(sel); if (!f.ok) startFit.push({ sel, ...f }); } }
-  ok(T('every blurb + fact fits the start spotlight'), startFit.length === 0, startFit);
-  ok(T('start (with spotlight) buttons on screen'), (await offscreen(p)).length === 0 && await noOverflow(p), await offscreen(p));
+  okP(T('every blurb + fact fits the start spotlight'), startFit.length === 0, startFit);
+  okP(T('start (with spotlight) buttons on screen'), (await offscreen(p)).length === 0 && await noOverflow(p), await offscreen(p));
   if (tag === 'iphone15' || tag === 'iphoneSE') { await p.screenshot({ path: `${SHOTS}/${tag === 'iphone15' ? 'iphone15' : 'iphonese'}-start.png` }); await p.locator('#spotStart').screenshot({ path: `${SHOTS}/${tag === 'iphone15' ? 'iphone15' : 'iphonese'}-start-spotlight.png` }); }
   const spotBefore = await p.evaluate(() => window.__fbs.spot.id), factBefore = await p.evaluate(() => window.__fbs.spot.fact);
 
@@ -157,7 +159,8 @@ async function suite(browserType, deviceName, tag) {
   const lay3 = await p.evaluate(() => { const S = window.__fbs.S, r = S.palletRect, hr = S.hostRects, tk = document.getElementById('spotTicker').getBoundingClientRect(), fb = document.getElementById('bottomBar').getBoundingClientRect(), hud = document.getElementById('hud').getBoundingClientRect();
     const palTop = r.y + window.__fbs.T.DEPTH_Y; return { palTop, mids: hr.map(h => h.y + h.h / 2), feet: hr.map(h => h.y + h.h), tickTop: tk.top, tickBottom: tk.bottom, scoreBottom: document.getElementById('best').getBoundingClientRect().bottom, barTop: fb.top, cam: S.cam }; });
   ok(T('opening view: pallet top deck within 3px of the hosts\' vertical midpoint'), lay3.cam === 0 && lay3.mids.every(m => Math.abs(m - lay3.palTop) <= 3), lay3);
-  ok(T('gameplay: product trivia under the HUD at top, company fact in bottom bar below hosts\' feet'), lay3.tickTop >= lay3.scoreBottom && lay3.feet.every(f => f <= lay3.barTop) && lay3.tickBottom < lay3.palTop, lay3);
+  if (LAND) ok(T('landscape gameplay: trivia + company fact share the bottom band, below the hosts\' feet and the pallet'), lay3.tickTop >= lay3.scoreBottom && lay3.feet.every(f => f <= lay3.barTop && f <= lay3.tickTop) && lay3.palTop < lay3.tickTop, lay3);
+  else ok(T('gameplay: product trivia under the HUD at top, company fact in bottom bar below hosts\' feet'), lay3.tickTop >= lay3.scoreBottom && lay3.feet.every(f => f <= lay3.barTop) && lay3.tickBottom < lay3.palTop, lay3);
   const dup = await p.evaluate(() => {
     const vis = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !el.closest('[hidden]'); };
     const sents = []; for (const el of document.querySelectorAll('#hud *, #bottomBar *, .screen:not([hidden]) *')) { if (el.children.length || !vis(el)) continue; for (const s of el.textContent.split(/[.–·]/).map(x => x.trim().toLowerCase()).filter(x => x.length > 18)) sents.push(s); }
@@ -240,7 +243,7 @@ async function suite(browserType, deviceName, tag) {
   ok(T('extrusion (push + cut) takes ~0.7 s sim and completes within 0.9 s wall'), ex1.log.length >= 1 && ex1.log.every(e => e.sim >= 0.68 && e.sim <= 0.75 && e.ms <= 900) && ex1.extr, ex1.log);
   ok(T('extrusion does not interrupt the spotlight rotation'), ex1.rotation === spotBefore);
   const pal = await p.evaluate(() => { const S = window.__fbs.S, r = S.palletRect, c = document.getElementById('game'), x2 = c.getContext('2d'), dpr = c.width / innerWidth;
-    const px = x2.getImageData(Math.round((r.x + r.w * 0.25) * dpr), Math.round((r.y + r.h - 3) * dpr), 1, 1).data; const bb = document.getElementById('bottomBar').getBoundingClientRect();
+    const px = x2.getImageData(Math.round((r.x + (S.hostRects && S.hostRects[0] ? S.hostRects[0].ox : 0) + r.w * 0.25) * dpr), Math.round((r.y + r.h - 3) * dpr), 1, 1).data; const bb = document.getElementById('bottomBar').getBoundingClientRect();
     return { r, px: [...px], barTop: bb.top, base: S.stack[0].base, firstOnPallet: S.stack[1] ? S.stack[1].y === S.stack[0].t : null }; });
   ok(T('wooden pallet renders (wood-coloured pixels) above the bottom bars'), pal.base && pal.px[0] > pal.px[1] && pal.px[1] > pal.px[2] && pal.px[0] > 120 && pal.r.y + pal.r.h <= pal.barTop, pal);
   const tickFont = await p.evaluate(() => parseFloat(getComputedStyle(document.getElementById('spotTicker')).fontSize));
@@ -319,10 +322,10 @@ async function suite(browserType, deviceName, tag) {
   ok(T('game over shows score + Great stack + hosts'), (await p.textContent('#finalScore')) === String(score) && (await p.textContent('#over h2')).includes('Great stack') && (await p.$$('#overHosts canvas')).length === 2);
   const overFit = [];
   for (let k = 0; k < 16; k++) { await p.evaluate(() => window.__fbs.spot.next()); for (const sel of ['#spotOver', '#factOver']) { const f = await fitCheck(sel); if (!f.ok) overFit.push({ sel, ...f }); } }
-  ok(T('every blurb fits the game-over spotlight'), overFit.length === 0 && await p.isVisible('#spotOver'), overFit);
+  okP(T('every blurb fits the game-over spotlight'), overFit.length === 0 && await p.isVisible('#spotOver'), overFit);
   ok(T('short legal line on game over'), await p.isVisible('#over .legal-short'));
   ok(T('over: tap targets'), (await smallTargets(p)).length === 0, await smallTargets(p));
-  ok(T('over: no overflow / on screen'), await noOverflow(p) && (await offscreen(p)).length === 0, await offscreen(p));
+  okP(T('over: no overflow / on screen'), await noOverflow(p) && (await offscreen(p)).length === 0, await offscreen(p));
   await p.screenshot({ path: `${SHOTS}/${{ iphone15: 'iphone15', iphoneSE: 'iphonese', chromium: 'chromium', pixel7: 'v2-android-pixel7', galaxyS8: 'v2-android-galaxys8' }[tag]}-gameover.png` });
   // collection
   await p.click('#btnCollOver'); await p.waitForTimeout(150);
@@ -372,7 +375,7 @@ async function suite(browserType, deviceName, tag) {
   if (browserType === 'chromium') {
     await p.goto(BASE); await p.waitForTimeout(1500);
     const sw = await p.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); return { reg: !!r, caches: await caches.keys() }; });
-    ok(T('service worker registered with fbs-v5 cache'), sw.reg && sw.caches.includes('fbs-v5'), sw);
+    ok(T('service worker registered with fbs-v6 cache'), sw.reg && sw.caches.includes('fbs-v6'), sw);
   }
   if (tag === 'pixel7' || tag === 'galaxyS8') {
     await p.goto(BASE + '?nospot'); await p.waitForTimeout(400);
@@ -423,8 +426,10 @@ async function suite(browserType, deviceName, tag) {
   if (!which || which === 'chromium') await suite('chromium', null, 'chromium');
   if (!which || which === 'android' || which === 'pixel7') await suite('chromium', 'Pixel 7', 'pixel7');
   if (!which || which === 'android' || which === 'galaxy') await suite('chromium', 'Galaxy S8', 'galaxyS8');
+  if (which === 'landscape') { await suite('webkit', 'iPhone 15 landscape', 'iphone15-land'); await suite('chromium', 'Pixel 7 landscape', 'pixel7-land'); }
   if (perfLog.length) console.log('perf', JSON.stringify(perfLog));
   console.log(results.join('\n'));
-  console.log(`\n${pass} passed, ${fail} failed`);
+  if (skips.length) console.log('skipped (portrait-only menu layout checks):\n  ' + skips.join('\n  '));
+  console.log(`\n${pass} passed, ${fail} failed${skips.length ? ', ' + skips.length + ' skipped' : ''}`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });
