@@ -46,16 +46,20 @@
 <div id="bottomBar" hidden><div id="factBar" class="fact"></div></div>
 
 <section id="start" class="screen">
-  <div id="spotStart" class="spot card-spot" aria-live="polite"></div>
+  <div class="lcol">
   <img class="brand-logo" id="startLogo" alt="">
   <h1>Foam Board<br><span>Stacker</span></h1>
   <div class="hosts" id="startHosts"></div>
   <p class="lead">Tap to drop each board. Overhangs get trimmed. Line them up for a <b>Perfect</b>!</p>
   <button id="btnPlay" class="btn primary">Play</button>
   <button id="btnCollStart" class="btn">Board Collection <span class="cnt" id="collCountStart"></span></button>
+  </div>
+  <div class="rcol">
+  <div id="spotStart" class="spot card-spot" aria-live="polite"></div>
   <div id="factStart" class="fact fact-card"></div>
   <div class="foot-row"><p class="foot"><span class="demo">Demo</span> <span id="footBrand"></span> · <button id="btnLegalStart" class="link-btn">Legal</button></p><div class="snd-row"><button id="btnMuteStart" class="icon-btn" aria-label="Mute sound">🔊</button><button id="btnMusicStart" class="icon-btn music-btn off" aria-label="Music off" aria-pressed="false">♫</button></div></div>
   <p class="legal-short">Demo for entertainment purposes only. Gilman Brothers and product names are trademarks of The Gilman Brothers Company.</p>
+  </div>
 </section>
 
 <section id="pause" class="screen" hidden>
@@ -69,16 +73,20 @@
 </section>
 
 <section id="over" class="screen" hidden>
-  <div id="spotOver" class="spot card-spot" aria-live="polite"></div>
+  <div class="lcol">
   <img class="brand-logo small" id="overLogo" alt="">
   <h2>Great stack!</h2>
-  <div class="hosts small" id="overHosts"></div>
   <div class="final"><div class="lbl">Score</div><div id="finalScore">0</div><div id="finalMeta"></div><div id="newBest" hidden>New best!</div></div>
   <div id="unlockNote"></div>
   <button id="btnRetry" class="btn primary">Retry</button>
   <div class="row"><button id="btnCollOver" class="btn">Collection</button><button id="btnHome2" class="btn">Home</button></div>
+  </div>
+  <div class="rcol">
+  <div id="spotOver" class="spot card-spot" aria-live="polite"></div>
+  <div class="hosts small" id="overHosts"></div>
   <div id="factOver" class="fact fact-card"></div>
   <p class="legal-short">Demo for entertainment purposes only. Gilman Brothers and product names are trademarks of The Gilman Brothers Company.</p>
+  </div>
 </section>
 
 <section id="coll" class="screen scroll" hidden>

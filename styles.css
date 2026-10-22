@@ -152,3 +152,52 @@ html.land #deckBlurb{max-width:min(60vw,420px)}
 html.land #billBanner{position:fixed;top:auto;transform:none;animation:none;left:calc(var(--sal) + 6px);bottom:calc(var(--sab) + 4px);width:calc(58% - var(--sal) - 10px);box-sizing:border-box;margin:0;z-index:6}
 html.land #hud:has(#billBanner:not([hidden])) #spotTicker{visibility:hidden}
 html.land .screen:not(.scroll){justify-content:flex-start;overflow-y:auto;-webkit-overflow-scrolling:touch} /* short landscape: menus scroll so every button stays reachable */
+/* ---------- v7 menus ----------
+   Portrait: the column wrappers are transparent (display:contents) and `order` restores the original one-column
+   sequence, so portrait renders exactly as before. Landscape (html.land = wide and under 560px tall): two columns. */
+.lcol,.rcol{display:contents}
+#spotStart{order:-1}
+#over > .lcol > *, #over > .rcol > *{order:20}
+#spotOver{order:1!important} #overLogo{order:2!important} #over h2{order:3!important} #overHosts{order:4!important} #over .final{order:5!important}
+#unlockNote{order:6!important} #btnRetry{order:7!important} #over .row{order:8!important} #factOver{order:9!important} #over .legal-short{order:10!important}
+
+html.land #start, html.land #over{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:clamp(14px,3vw,32px);align-items:center;justify-items:center;
+  overflow:hidden;padding:calc(var(--sat) + 10px) calc(var(--sar) + 16px) calc(var(--sab) + 8px) calc(var(--sal) + 16px)}
+html.land .lcol, html.land .rcol{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:0;width:100%;max-width:360px;max-height:100%}
+html.land .brand-logo{width:min(100%,220px);max-height:42px}
+html.land .brand-logo.small{width:min(100%,170px);max-height:32px}
+html.land h1{font-size:26px;line-height:1.05} html.land h1 br{display:none} html.land h1 span::before{content:" "}
+html.land h2{font-size:22px;margin:0}
+html.land .hosts{gap:18px} html.land .hosts canvas{width:36px;height:54px} html.land .hosts.small canvas{width:32px;height:48px} html.land .hosts figcaption{font-size:10.5px}
+html.land .lead{font-size:12.5px;margin:0;max-width:330px;line-height:1.3}
+html.land .btn{width:min(100%,300px);min-height:46px;font-size:16px} html.land .btn.primary{min-height:50px;font-size:19px}
+html.land .row{width:min(100%,300px)}
+html.land .card-spot{width:100%;font-size:12.5px;min-height:0}
+html.land .fact-card{width:100%;font-size:13px}
+html.land .legal-short{font-size:10.5px;line-height:1.3;max-width:100%;margin:0}
+html.land .foot-row{max-width:100%}
+html.land #over .final{display:flex;align-items:baseline;justify-content:center;gap:10px;flex-wrap:wrap}
+html.land #over .final .lbl{display:block}
+html.land .final #finalScore{font-size:40px}
+html.land #finalMeta{font-size:12.5px;width:100%}
+html.land #newBest{width:100%}
+html.land #unlockNote{-webkit-line-clamp:1;font-size:12px}
+@media (max-height:360px){ html.land .lead{display:none} html.land #unlockNote{display:none} html.land .lcol,html.land .rcol{gap:6px} html.land .btn{min-height:44px} html.land .btn.primary{min-height:48px} }
+/* pause: two-column button grid */
+html.land #pause{display:grid;grid-template-columns:repeat(2,minmax(150px,230px));justify-content:center;align-content:center;gap:8px 12px}
+html.land #pause > h2, html.land #pause > .foot, html.land #pause #btnResume{grid-column:1/-1;justify-self:center}
+html.land #pause .btn{width:100%;min-height:46px} html.land #pause #btnResume{width:min(100%,472px)}
+/* legal: text flows into columns so it fits without scrolling */
+html.land #legal{justify-content:flex-start;padding:calc(var(--sat) + 6px) calc(var(--sar) + 16px) calc(var(--sab) + 6px) calc(var(--sal) + 16px);gap:4px}
+html.land #legal .coll-head{max-width:none}
+html.land #legal .coll-head h2{font-size:18px}
+html.land .legal-body{max-width:none;width:100%;columns:auto 210px;column-gap:20px;font-size:11.5px;line-height:1.36}
+html.land .legal-body p{margin:0 0 6px;break-inside:auto}
+/* collection: a scrolling card list by nature; wider grid in landscape so it scrolls less, header stays pinned */
+html.land #coll .coll-head, html.land #coll .coll-sub, html.land #cards, html.land #coll #collFoot{max-width:none}
+html.land #coll .coll-head{background:#0d0f16f0;z-index:2;padding:2px 0}
+html.land #cards{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+html.land .foot-row #footBrand{display:none} /* the logo is already on screen; keeps Demo · Legal · 🔊 ♫ on one line */
+html.land .foot-row{gap:6px}
+html.land #start, html.land #over, html.land #pause, html.land #legal, html.land #coll{background:radial-gradient(120% 80% at 50% 0%,#1b2236fb,#0d0f16fd 70%)} /* the stack + host bubbles behind don't bleed through the two columns */
+html.land .fact-card{padding-top:9px;margin-top:4px}

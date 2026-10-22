@@ -48,7 +48,6 @@ async function suite(browserType, deviceName, tag) {
   const touch = !!opts.hasTouch;
   const T = n => `${tag}: ${n}`;
   const LAND = tag.endsWith('-land'); // landscape pass: menus scroll instead of fitting; gameplay uses the bottom-band trivia layout
-  const okP = (n, c, info) => LAND ? skips.push(n) : ok(n, c, info);
 
   await p.goto(BASE + '?seed=7&nospot&nobill'); await p.waitForTimeout(600);
   const au0 = await p.evaluate(() => ({ unlocked: window.FBS_AUDIO.state.unlocked, hasCtx: !!window.FBS_AUDIO.state.ctx }));
@@ -61,7 +60,7 @@ async function suite(browserType, deviceName, tag) {
   ok(T('hosts on start screen'), (await p.$$eval('#startHosts figure', fs => fs.map(f => f.textContent))).join('|') === 'Evan Gilman|Cyrus Gilman');
   ok(T('start: tap targets >= 44'), (await smallTargets(p)).length === 0, await smallTargets(p));
   ok(T('start: no overflow'), await noOverflow(p));
-  okP(T('start: buttons on screen'), (await offscreen(p)).length === 0, await offscreen(p));
+  ok(T('start: buttons on screen'), (await offscreen(p)).length === 0, await offscreen(p));
 
   // --- duplicate audit (content) ---
   const STOP = new Set('a an the and or of for to in on with by is it its at as that this from per your you can be are into'.split(' '));
@@ -81,7 +80,7 @@ async function suite(browserType, deviceName, tag) {
   ok(T('Legal screen opens with entertainment + warranty wording'), lg.vis && lg.t.includes('entertainment purposes only') && lg.t.includes('makes no offer, warranty, or representation') && lg.t.includes('registered trademarks or trademarks of The Gilman Brothers Company') && lg.t.includes('not quotes') && lg.t.includes('© 2026. All rights reserved.'));
   const missingTm = CAT.products.filter(x => !lg.t.includes(x.name)).map(x => x.name);
   ok(T('Legal screen lists every product name with its exact mark'), missingTm.length === 0, missingTm);
-  ok(T('Legal screen fits (no horizontal overflow, close reachable, readable)'), !lg.hOver && lg.closeOn && lg.fs >= 13 && (await smallTargets(p)).length === 0, lg.hOver);
+  ok(T('Legal screen fits (no horizontal overflow, close reachable, readable)'), !lg.hOver && lg.closeOn && lg.fs >= (LAND ? 11.5 : 13) && (await smallTargets(p)).length === 0, lg.hOver);
   if (tag === 'iphoneSE' || tag === 'galaxyS8') await p.screenshot({ path: `${SHOTS}/${tag === 'iphoneSE' ? 'iphonese' : 'v2-android-galaxys8'}-legal.png` });
   await p.click('#btnLegalClose'); await p.waitForTimeout(100);
   ok(T('Legal closes back to start'), await p.isVisible('#start'));
@@ -90,7 +89,9 @@ async function suite(browserType, deviceName, tag) {
   const fitCheck = (sel) => p.evaluate(sel => { const el = document.querySelector(sel); const r = el.getBoundingClientRect(); return { ok: el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1 && r.left >= -1 && r.right <= innerWidth + 1 && r.top >= -1 && r.bottom <= innerHeight + 1, sh: el.scrollHeight, ch: el.clientHeight, id: el.dataset.id }; }, sel);
   const blurbs = await p.evaluate(() => window.__fbs.products.map(x => x.blurb));
   ok(T('all 16 products have a unique 1–2 line blurb'), blurbs.length === CAT.products.length && blurbs.every(b => b && b.length >= 40 && b.length <= 130) && new Set(blurbs).size === blurbs.length);
-  ok(T('start: product trivia on top, company fact below'), await p.isVisible('#spotStart') && (await p.textContent('#spotStart')).includes('Product spotlight') && !(await p.getAttribute('#spotStart', 'data-fact')) && !!(await p.getAttribute('#factStart', 'data-fact')) && await p.evaluate(() => document.getElementById('spotStart').getBoundingClientRect().bottom < document.getElementById('btnPlay').getBoundingClientRect().top && document.getElementById('factStart').getBoundingClientRect().top > document.getElementById('btnPlay').getBoundingClientRect().bottom));
+  ok(T('start: product trivia on top, company fact below'), await p.isVisible('#spotStart') && (await p.textContent('#spotStart')).includes('Product spotlight') && !(await p.getAttribute('#spotStart', 'data-fact')) && !!(await p.getAttribute('#factStart', 'data-fact')) && await p.evaluate(LAND => { const g = id => document.getElementById(id).getBoundingClientRect(), sp = g('spotStart'), fa = g('factStart'), pl = g('btnPlay');
+    return LAND ? sp.left > pl.right && fa.left > pl.right && sp.bottom <= fa.top // landscape: right column, trivia above the fact
+      : sp.bottom < pl.top && fa.top > pl.bottom; }, LAND));
   const facts = await p.evaluate(() => window.__fbs.facts);
   ok(T(`company facts (${facts.length}) each have a gilmanbrothers.com source URL`), facts.length >= 12 && facts.every(f => /^https:\/\/gilmanbrothers\.com\//.test(f.source) && f.text.length > 20) && new Set(facts.map(f => f.id)).size === facts.length);
   const dur = await p.evaluate(() => window.__fbs.products.map(x => ({ id: x.id, d: window.__fbs.spot.durationFor(x), w: (x.name + ' ' + x.blurb).split(/\s+/).length })));
@@ -109,8 +110,8 @@ async function suite(browserType, deviceName, tag) {
   ok(T('facts shuffle-bag covers every fact'), new Set(fids.slice(0, 2 * facts.length > 64 ? 64 : 2 * facts.length)).size === facts.length);
   const startFit = [];
   for (let k = 0; k < 16; k++) { await p.evaluate(() => window.__fbs.spot.next()); for (const sel of ['#spotStart', '#factStart']) { const f = await fitCheck(sel); if (!f.ok) startFit.push({ sel, ...f }); } }
-  okP(T('every blurb + fact fits the start spotlight'), startFit.length === 0, startFit);
-  okP(T('start (with spotlight) buttons on screen'), (await offscreen(p)).length === 0 && await noOverflow(p), await offscreen(p));
+  ok(T('every blurb + fact fits the start spotlight'), startFit.length === 0, startFit);
+  ok(T('start (with spotlight) buttons on screen'), (await offscreen(p)).length === 0 && await noOverflow(p), await offscreen(p));
   if (tag === 'iphone15' || tag === 'iphoneSE') { await p.screenshot({ path: `${SHOTS}/${tag === 'iphone15' ? 'iphone15' : 'iphonese'}-start.png` }); await p.locator('#spotStart').screenshot({ path: `${SHOTS}/${tag === 'iphone15' ? 'iphone15' : 'iphonese'}-start-spotlight.png` }); }
   const spotBefore = await p.evaluate(() => window.__fbs.spot.id), factBefore = await p.evaluate(() => window.__fbs.spot.fact);
 
@@ -194,7 +195,7 @@ async function suite(browserType, deviceName, tag) {
   for (let k = 0; k < 3; k++) await perfectDrop();
   const ad1 = await p.evaluate(() => { const S = window.__fbs.S, b = document.getElementById('btnAdhere'), r = b.getBoundingClientRect(); return { n: S.adhere, streak: S.perfStreak, coll: window.__fbs.collection().includes('adhere'), vis: !b.hidden && r.width >= 44 && r.height >= 44, cnt: document.getElementById('adhereCount').textContent, pop: document.getElementById('deckBlurb').textContent, rect: { x: r.x, y: r.y, w: r.width, h: r.height } }; });
   ok(T('ADHERE™ earned after 3 Perfects in a row; ≥44pt button with count; pop-up text'), ad1.n === 1 && ad1.coll && ad1.vis && ad1.cnt === '1' && ad1.pop.includes('ADHERE™ — holds up to ½ lb/sq in, removes damage-free'), ad1);
-  const adBlock = await p.evaluate(() => { const r = document.getElementById('btnAdhere').getBoundingClientRect(), pr = window.__fbs.S.palletRect; return r.bottom < pr.y - 40; });
+  const adBlock = await p.evaluate(() => { const r = document.getElementById('btnAdhere').getBoundingClientRect(), S = window.__fbs.S, pr = S.palletRect, ox = S.hostRects && S.hostRects[0] ? S.hostRects[0].ox : 0; return r.bottom < pr.y - 40 || r.right < pr.x + ox - 20; }); // landscape: the HUD column sits beside the centred scene
   ok(T('ADHERE™ button sits in the HUD, clear of the stack'), adBlock);
   const capN = await p.evaluate(() => { const f = window.__fbs; f.earnAdhere(); f.earnAdhere(); f.earnAdhere(); return f.S.adhere; });
   ok(T('ADHERE™ cap is 2'), capN === 2, capN);
@@ -322,10 +323,10 @@ async function suite(browserType, deviceName, tag) {
   ok(T('game over shows score + Great stack + hosts'), (await p.textContent('#finalScore')) === String(score) && (await p.textContent('#over h2')).includes('Great stack') && (await p.$$('#overHosts canvas')).length === 2);
   const overFit = [];
   for (let k = 0; k < 16; k++) { await p.evaluate(() => window.__fbs.spot.next()); for (const sel of ['#spotOver', '#factOver']) { const f = await fitCheck(sel); if (!f.ok) overFit.push({ sel, ...f }); } }
-  okP(T('every blurb fits the game-over spotlight'), overFit.length === 0 && await p.isVisible('#spotOver'), overFit);
+  ok(T('every blurb fits the game-over spotlight'), overFit.length === 0 && await p.isVisible('#spotOver'), overFit);
   ok(T('short legal line on game over'), await p.isVisible('#over .legal-short'));
   ok(T('over: tap targets'), (await smallTargets(p)).length === 0, await smallTargets(p));
-  okP(T('over: no overflow / on screen'), await noOverflow(p) && (await offscreen(p)).length === 0, await offscreen(p));
+  ok(T('over: no overflow / on screen'), await noOverflow(p) && (await offscreen(p)).length === 0, await offscreen(p));
   await p.screenshot({ path: `${SHOTS}/${{ iphone15: 'iphone15', iphoneSE: 'iphonese', chromium: 'chromium', pixel7: 'v2-android-pixel7', galaxyS8: 'v2-android-galaxys8' }[tag]}-gameover.png` });
   // collection
   await p.click('#btnCollOver'); await p.waitForTimeout(150);
@@ -375,7 +376,7 @@ async function suite(browserType, deviceName, tag) {
   if (browserType === 'chromium') {
     await p.goto(BASE); await p.waitForTimeout(1500);
     const sw = await p.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); return { reg: !!r, caches: await caches.keys() }; });
-    ok(T('service worker registered with fbs-v6 cache'), sw.reg && sw.caches.includes('fbs-v6'), sw);
+    ok(T('service worker registered with fbs-v7 cache'), sw.reg && sw.caches.includes('fbs-v7'), sw);
   }
   if (tag === 'pixel7' || tag === 'galaxyS8') {
     await p.goto(BASE + '?nospot'); await p.waitForTimeout(400);
@@ -403,6 +404,19 @@ async function suite(browserType, deviceName, tag) {
       ok(T('Android: ~60fps with 4x CPU throttle'), fps.fps >= 55, fps);
     }
   }
+  // v7 landscape menus: one screen, no scrolling, every control >= 44px
+  if (LAND) {
+    const scr = id => p.evaluate(id => { const s = document.getElementById(id); return { id, scroll: s.scrollHeight - s.clientHeight, hidden: s.hidden }; }, id);
+    const menuOk = async (id) => { const r = await scr(id), off = await offscreen(p), sm = await smallTargets(p);
+      ok(T(`landscape ${id}: fits one screen (no scroll), all buttons on screen`), !r.hidden && r.scroll <= 0 && off.length === 0 && await noOverflow(p), { r, off });
+      ok(T(`landscape ${id}: tap targets >= 44px`), sm.length === 0, sm); };
+    await p.goto(BASE + '?seed=7&nobill'); await p.waitForTimeout(700); await menuOk('start');
+    await p.click('#btnPlay'); await p.waitForTimeout(300); await p.click('#btnPause'); await p.waitForTimeout(150); await menuOk('pause');
+    await p.click('#btnLegalPause'); await p.waitForTimeout(150); await menuOk('legal');
+    await p.click('#btnLegalClose'); await p.waitForTimeout(100); await p.click('#btnResume'); await p.waitForTimeout(100);
+    for (let i = 0; i < 8 && !(await p.isVisible('#over')); i++) { await p.evaluate(async () => { const F = window.__fbs; await F.finishExtrusion(); if (!F.S || F.S.mode !== 'play') return; F.S.retryAvail = false; F.S.adhere = 0; F.setMovingX(-2000); F.drop(); }); await p.waitForTimeout(1800); }
+    await menuOk('over');
+  }
   // sound toggles persist
   await p.goto(BASE + '?nospot&nobill'); await p.waitForTimeout(400);
   await p.click('#btnMuteStart'); await p.click('#btnMusicStart'); await p.waitForTimeout(100);
@@ -426,7 +440,7 @@ async function suite(browserType, deviceName, tag) {
   if (!which || which === 'chromium') await suite('chromium', null, 'chromium');
   if (!which || which === 'android' || which === 'pixel7') await suite('chromium', 'Pixel 7', 'pixel7');
   if (!which || which === 'android' || which === 'galaxy') await suite('chromium', 'Galaxy S8', 'galaxyS8');
-  if (which === 'landscape') { await suite('webkit', 'iPhone 15 landscape', 'iphone15-land'); await suite('chromium', 'Pixel 7 landscape', 'pixel7-land'); }
+  if (which === 'landscape') { await suite('webkit', 'iPhone 15 landscape', 'iphone15-land'); await suite('webkit', 'iPhone SE landscape', 'iphoneSE-land'); await suite('chromium', 'Pixel 7 landscape', 'pixel7-land'); await suite('chromium', 'Galaxy S8 landscape', 'galaxyS8-land'); }
   if (perfLog.length) console.log('perf', JSON.stringify(perfLog));
   console.log(results.join('\n'));
   if (skips.length) console.log('skipped (portrait-only menu layout checks):\n  ' + skips.join('\n  '));
