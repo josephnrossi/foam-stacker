@@ -10,3 +10,5 @@ iPhone-first, one-tap stacking game PWA featuring the Gilman Brothers foam board
 - **Tests:** `node tests/run.js` (Playwright WebKit iPhone 15 / iPhone SE + Chromium) against a local server on :8833.
 
 Demo build, not an official Gilman Brothers app.
+
+**Demo for entertainment purposes only. Gilman Brothers and product names are trademarks of The Gilman Brothers Company.** See the in-game Legal screen for the full notice.

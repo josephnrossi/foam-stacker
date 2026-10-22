@@ -73,14 +73,15 @@
   const emblem = img(CFG.BRAND_EMBLEM);
 
   // ---------- layout ----------
+  const IS_ANDROID = /Android/i.test(navigator.userAgent);
   let W = 390, H = 844, DPR = 1, safeTop = 0, safeBot = 0;
   function measureSafe() {
     const d = document.createElement('div'); d.style.cssText = 'position:fixed;top:0;left:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden';
     document.body.appendChild(d); const cs = getComputedStyle(d); safeTop = parseFloat(cs.paddingTop) || 0; safeBot = parseFloat(cs.paddingBottom) || 0; d.remove();
   }
   function resize() {
-    W = window.innerWidth; H = window.innerHeight; DPR = Math.min(3, window.devicePixelRatio || 1);
-    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); measureSafe();
+    W = window.innerWidth; H = window.innerHeight; DPR = Math.min(IS_ANDROID ? 2 : 3, window.devicePixelRatio || 1);
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); measureSafe(); layoutBottom();
   }
 
   // ---------- state ----------
@@ -89,7 +90,9 @@
   let collection = new Set(store.get(LS.coll, []));
   const productById = Object.fromEntries(PRODUCTS.map(p => [p.id, p]));
   const baseW = () => Math.round(Math.min(W * 0.6, 250));
-  const groundY = () => H - safeBot - 96; // screen y of world 0
+  let bottomUI = 0; // px reserved at the bottom for the spotlight ticker
+  function layoutBottom() { const t = $('bottomBar'); bottomUI = t && !t.hidden ? H - t.getBoundingClientRect().top : safeBot; }
+  const groundY = () => H - bottomUI - 88; // screen y of world 0
 
   function lookFor(p) {
     const v = pick(p.look.variants);
@@ -103,7 +106,7 @@
       falling: [], parts: [], flashes: [], cam: 0, camT: 0, shake: 0,
       heatNext: false, quickBond: 0, retryAvail: false, bonusNext: false,
       rain: 0, rainDrops: [], unlockedNow: [], hostState: [{ anim: 'idle', t: 0, bubble: null }, { anim: 'idle', t: 0, bubble: null }],
-      moving: null, overT: 0, maxW: bw,
+      moving: null, overT: 0, maxW: bw, seen: new Set(),
     };
     spawn();
   }
@@ -129,6 +132,7 @@
     S.moving = m;
     if (S.quickBond > 0) S.quickBond--;
     updateNowBoard();
+    if (!S.seen.has(p.id)) { S.seen.add(p.id); deckShow(p); }
   }
   function updateNowBoard() {
     const m = S && S.moving; const el = $('nowBoard');
@@ -185,8 +189,12 @@
     const ms = Math.floor(S.floors / T.MILESTONE); if (ms > (S.msCount || 0)) { S.msCount = ms; S.bonusNext = true; host(ms % 2, 'cheer', 'Bonus board for you!'); sfx.bonus(); }
     if (!collection.has(m.p.id)) { collection.add(m.p.id); store.set(LS.coll, [...collection]); S.unlockedNow.push(m.p.id); toast('New card: ' + m.p.name); }
     $('score').textContent = S.score;
-    S.camT = Math.max(0, board.y + board.t - (H * 0.42 - 0)); // keep top around 42% from top
+    S.camT = camTarget(board.y + board.t);
     spawn();
+  }
+  function camTarget(topY) { // keep the stack top ~45% down the free play area between the HUD and the ground
+    const hudB = safeTop + 150, g = groundY(), target = hudB + Math.max(60, g - hudB) * 0.45;
+    return Math.max(0, topY - (g - target));
   }
   function grow(board, px) {
     const nw = Math.min(S.maxW, board.w + px); if (nw <= board.w) return;
@@ -216,11 +224,11 @@
   }
 
   // ---------- toast ----------
-  let toastEl = null, toastTimer = 0;
-  function toast(msg) {
-    if (!toastEl) { toastEl = document.createElement('div'); toastEl.id = 'toast'; toastEl.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 158px);background:#171a24f2;border:1px solid #f5c54266;color:#eef1f7;padding:8px 14px;border-radius:14px;font-size:13px;z-index:6;pointer-events:none;max-width:86vw;text-align:center;transition:opacity .3s'; document.body.appendChild(toastEl); }
-    toastEl.textContent = '🃏 ' + msg; toastEl.style.opacity = 1; clearTimeout(toastTimer); toastTimer = setTimeout(() => (toastEl.style.opacity = 0), 1800);
+  function toast(msg) { // shown in the HUD pill so nothing stacks over the play area
+    const el = $('deckBlurb'); el.textContent = '🃏 ' + msg; el.hidden = false; el.style.opacity = 1; clearTimeout(deckTimer);
+    deckTimer = setTimeout(() => { el.style.opacity = 0; deckTimer = setTimeout(() => (el.hidden = true), 300); }, 1600);
   }
+
 
   // ---------- update ----------
   function update(dt) {
@@ -230,9 +238,9 @@
     if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 30);
     for (const h of S.hostState) { if (h.anim === 'cheer') { h.t -= dt; if (h.t <= 0) h.anim = 'idle'; } if (h.bubble) { h.bubble.t -= dt; if (h.bubble.t <= 0) h.bubble = null; } }
     if (S.mode === 'play' && S.moving) {
-      const m = S.moving; m.x += m.dir * m.speed * dt;
+      const m = S.moving; if (m.speed > 0) { m.x += m.dir * m.speed * dt;
       const minX = -m.w * 0.35, maxX = W - m.w * 0.65;
-      if (m.x > maxX) { m.x = maxX - (m.x - maxX); m.dir = -1; } else if (m.x < minX) { m.x = minX + (minX - m.x); m.dir = 1; }
+      if (m.x > maxX) { m.x = maxX - (m.x - maxX); m.dir = -1; } else if (m.x < minX) { m.x = minX + (minX - m.x); m.dir = 1; } }
     }
     for (const b of S.stack) if (b.landT != null && b.landT < 1) b.landT += dt * 6;
     for (let i = S.falling.length - 1; i >= 0; i--) { const f = S.falling[i]; f.vy -= 1500 * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.rot += f.vr * dt; if (f.y < S.cam - H) S.falling.splice(i, 1); }
@@ -289,7 +297,7 @@
     ctx.fillStyle = '#ffffff10'; ctx.fillRect(b.x - 6, yt, b.w + 12, 2);
   }
   function drawHosts(dt) {
-    const sc = W < 360 ? 2 : 2.25, hw = SPR.W * sc, hh = SPR.H * sc, yb = H - safeBot - 8;
+    const sc = W < 360 ? 1.3 : 1.5, hw = SPR.W * sc, hh = SPR.H * sc, yb = H - Math.max(bottomUI, safeBot) - 6;
     CFG.HOSTS.forEach((h, i) => {
       const st = S ? S.hostState[i] : { anim: 'idle' };
       const fr = st.anim === 'cheer' ? SPR.FRAMES.cheer[Math.floor(performance.now() / 180) % 2] : SPR.FRAMES.idle[Math.floor((performance.now() / 600 + i * 0.5)) % 2];
@@ -337,7 +345,7 @@
     for (const p of S.parts) { ctx.globalAlpha = Math.max(0, 1 - p.t / p.life); ctx.fillStyle = p.col; ctx.fillRect(p.x - 2, sy(p.y) - 2, 4, 4); }
     ctx.globalAlpha = 1;
     if (S.rainDrops.length) { ctx.strokeStyle = '#8fb8ff66'; ctx.lineWidth = 1.2; ctx.beginPath(); for (const d of S.rainDrops) { ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + 4, d.y - 14); } ctx.stroke(); }
-    if (S.combo >= 2 && S.mode === 'play') { ctx.fillStyle = '#f5c542'; ctx.font = '800 15px -apple-system,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Perfect ×' + S.combo, W / 2, safeTop + 140); }
+    if (S.combo >= 2 && S.mode === 'play') { ctx.fillStyle = '#f5c542'; ctx.font = '800 15px -apple-system,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Perfect ×' + S.combo, W / 2, (S.moving ? sy(S.moving.y) - S.moving.t - T.DEPTH_Y - 18 : H * 0.35)); }
     ctx.restore();
     drawHosts();
   }
@@ -352,9 +360,85 @@
     requestAnimationFrame(frame);
   }
 
+  // ---------- product spotlight + company fact (shuffle-bags, read-time based rotation) ----------
+  const FACTS = window.FBS_FACTS || [];
+  const words = t => (t.match(/\S+/g) || []).length;
+  const durationFor = p => Math.max(7000, 2000 + 250 * words(p.name + ' ' + p.blurb));
+  function bag(key, n) {
+    const st = store.get(key, null);
+    const b = st && Array.isArray(st.bag) && st.bag.length === n ? st : { bag: [], pos: n, last: -1 };
+    return {
+      st: b,
+      cur() { return this.st.pos < n ? this.st.bag[this.st.pos] : this.st.last >= 0 ? this.st.last : 0; },
+      next() {
+        const s = this.st; s.pos++;
+        if (s.pos >= n) { // reshuffle; never repeat across the boundary
+          const prev = s.bag.length ? s.bag[n - 1] : s.last;
+          const a = [...Array(n).keys()];
+          for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+          if (n > 1 && a[0] === prev) { const j = 1 + Math.floor(Math.random() * (n - 1)); [a[0], a[j]] = [a[j], a[0]]; }
+          s.bag = a; s.pos = 0;
+        }
+        s.last = s.bag[s.pos]; store.set(key, s); return s.last;
+      },
+    };
+  }
+  const pBag = bag('fbs.spotbag', PRODUCTS.length), fBag = bag('fbs.factbag', FACTS.length);
+  if (pBag.st.pos >= PRODUCTS.length) pBag.next();
+  if (FACTS.length && fBag.st.pos >= FACTS.length) fBag.next();
+  const spot = { timer: 0, shownAt: performance.now(), history: [] };
+  const curP = () => PRODUCTS[pBag.cur()], curF = () => FACTS[fBag.cur()];
+  function spotFill(el, p, f, mode) {
+    if (!el) return; el.innerHTML = '';
+    const txt = document.createElement('div'); txt.className = 'txt';
+    if (mode !== 'fact') {
+      if (mode === 'card') { const k = document.createElement('span'); k.className = 'k'; k.textContent = 'Product spotlight'; txt.append(k); }
+      const n = document.createElement('span'); n.className = 'n'; n.textContent = p.name;
+      const b = document.createElement('span'); b.className = 'b'; b.textContent = ' – ' + p.blurb;
+      txt.append(n, b);
+    }
+    if (f && (mode === 'card' || mode === 'fact')) {
+      const fa = document.createElement('div'); fa.className = 'fa'; fa.textContent = f.text; fa.dataset.src = f.source; txt.append(fa);
+      el.dataset.fact = f.id;
+    }
+    el.append(txt); el.dataset.id = p.id;
+  }
+  function spotRender() {
+    const p = curP(), f = curF();
+    spotFill($('spotStart'), p, f, 'card'); spotFill($('spotOver'), p, f, 'card');
+    spotFill($('spotTicker'), p, null, 'ticker'); spotFill($('factBar'), p, f, 'fact');
+  }
+  const SPOT_IDS = ['spotStart', 'spotOver', 'spotTicker', 'factBar'];
+  function spotAdvance() { // synchronous: product + fact change together
+    const pi = pBag.next(); if (FACTS.length) fBag.next();
+    spotRender(); spot.shownAt = performance.now(); spot.history.push({ id: PRODUCTS[pi].id, fact: curF() && curF().id, at: spot.shownAt });
+    return PRODUCTS[pi].id;
+  }
+  function spotSchedule() {
+    clearTimeout(spot.timer); if (qs.has('nospot')) return;
+    spot.timer = setTimeout(() => {
+      for (const id of SPOT_IDS) $(id).classList.add('fade');
+      setTimeout(() => { spotAdvance(); for (const id of SPOT_IDS) $(id).classList.remove('fade'); spotSchedule(); }, 350);
+    }, durationFor(curP()));
+  }
+  function sizeBottom() { // reserve the tallest ticker/fact so the layout never jumps between rotations
+    const t = $('spotTicker'), fb = $('factBar'), bb = $('bottomBar'); if (!t) return;
+    const wasHidden = bb.hidden; bb.hidden = false; bb.style.visibility = 'hidden';
+    t.style.height = fb.style.height = 'auto'; let th = 0, fh = 0;
+    for (const p of PRODUCTS) { spotFill(t, p, null, 'ticker'); th = Math.max(th, t.offsetHeight); }
+    for (const f of FACTS) { spotFill(fb, PRODUCTS[0], f, 'fact'); fh = Math.max(fh, fb.offsetHeight); }
+    t.style.height = th + 'px'; fb.style.height = fh + 'px'; bb.style.visibility = ''; bb.hidden = wasHidden; spotRender();
+  }
+  let deckTimer = 0;
+  function deckShow(p) { // name only; the ticker carries the blurb, rotation timing is untouched
+    const el = $('deckBlurb'); el.textContent = 'Off the line: ' + p.name;
+    el.hidden = false; el.style.opacity = 1; el.dataset.id = p.id; clearTimeout(deckTimer);
+    deckTimer = setTimeout(() => { el.style.opacity = 0; deckTimer = setTimeout(() => (el.hidden = true), 300); }, 1800);
+  }
+
   // ---------- screens ----------
-  const screens = ['start', 'pause', 'over', 'coll'];
-  function show(id) { for (const s of screens) $(s).hidden = s !== id; $('hud').hidden = !(S && (S.mode === 'play' || S.mode === 'dying' || S.mode === 'pause') && (id == null || id === 'pause')); }
+  const screens = ['start', 'pause', 'over', 'coll', 'legal'];
+  function show(id) { for (const s of screens) $(s).hidden = s !== id; $('hud').hidden = !(S && (S.mode === 'play' || S.mode === 'dying' || S.mode === 'pause') && (id == null || id === 'pause')); $('bottomBar').hidden = $('hud').hidden; if ($('hud').hidden) $('deckBlurb').hidden = true; layoutBottom(); }
   let collReturn = 'start';
   function start() { ac(); newGame(); $('score').textContent = '0'; $('best').textContent = 'Best ' + best(); show(null); host(0, 'cheer', 'Let\u2019s stack!'); }
   function pause() { if (!S || S.mode !== 'play') return; S.mode = 'pause'; show('pause'); }
@@ -368,6 +452,9 @@
     host(0, 'cheer', 'Great stack!'); host(1, 'cheer', 'Go again?');
     drawHostsInto($('overHosts'), 'cheer'); show('over'); $('best').textContent = 'Best ' + Math.max(b, S.score);
   }
+  let legalReturn = 'start';
+  function openLegal(from) { legalReturn = from; show('legal'); $('legal').scrollTop = 0; }
+  function closeLegal() { show(legalReturn); }
   function openColl(from) { collReturn = from; renderCards(); show('coll'); }
   function closeColl() { if (collReturn === 'pause') show('pause'); else if (collReturn === 'over') show('over'); else { show('start'); } }
 
@@ -408,7 +495,7 @@
   function drawHostsInto(el, mode) {
     el.innerHTML = '';
     CFG.HOSTS.forEach((h, i) => {
-      const f = document.createElement('figure'); const c = document.createElement('canvas'); c.width = 24; c.height = 32;
+      const f = document.createElement('figure'); const c = document.createElement('canvas'); c.width = SPR.W; c.height = SPR.H;
       const x = c.getContext('2d'); const fr = mode === 'cheer' ? 2 + i % 2 : (i === 0 ? 0 : 2);
       x.drawImage(SPR.frameCanvas(h, fr), 0, 0);
       const cap = document.createElement('figcaption'); cap.textContent = h.name; f.append(c, cap); el.append(f);
@@ -427,18 +514,27 @@
   $('btnPause').onclick = pause; $('btnResume').onclick = resume; $('btnRestart').onclick = start; $('btnPlay').onclick = start; $('btnRetry').onclick = start;
   $('btnHome').onclick = $('btnHome2').onclick = () => { S = null; renderCards(); show('start'); };
   $('btnCollStart').onclick = () => openColl('start'); $('btnCollPause').onclick = () => openColl('pause'); $('btnCollOver').onclick = () => openColl('over'); $('btnCollClose').onclick = closeColl;
+  $('btnLegalStart').onclick = () => openLegal('start'); $('btnLegalPause').onclick = () => openLegal('pause'); $('btnLegalClose').onclick = closeLegal;
 
   // ---------- boot ----------
   function boot() {
-    resize(); window.addEventListener('resize', resize);
+    resize(); window.addEventListener('resize', resize); if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+    // unlock WebAudio on the first tap/click/key; block long-press menus and double-tap zoom on controls
+    const unlock = () => { ac(); window.removeEventListener('pointerdown', unlock, true); window.removeEventListener('keydown', unlock, true); };
+    window.addEventListener('pointerdown', unlock, true); window.addEventListener('keydown', unlock, true);
+    document.addEventListener('contextmenu', e => { if (!e.target.closest('#coll .desc')) e.preventDefault(); });
+    document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+    document.addEventListener('touchmove', e => { if (!e.target.closest('.screen.scroll')) e.preventDefault(); }, { passive: false });
     setMute(muted);
     for (const id of ['startLogo', 'overLogo']) { $(id).src = CFG.BRAND_LOGO; $(id).alt = CFG.BRAND_NAME + ' logo'; }
+    { const names = PRODUCTS.map(p => p.name); $('legalProducts').textContent = names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; }
     $('footBrand').textContent = `· Featuring ${CFG.BRAND_NAME} foam boards`;
-    drawHostsInto($('startHosts'), 'present'); renderCards();
+    drawHostsInto($('startHosts'), 'present'); renderCards(); sizeBottom(); spotRender(); spotSchedule(); window.addEventListener('resize', sizeBottom);
     if (qs.has('sprites')) {
       const sh = $('spriteSheet'); sh.hidden = false;
       CFG.HOSTS.forEach(h => ['idle A', 'idle B', 'cheer A', 'cheer B'].forEach((lbl, fr) => {
-        const f = document.createElement('figure'), c = document.createElement('canvas'); c.width = 24; c.height = 32; c.getContext('2d').drawImage(SPR.frameCanvas(h, fr), 0, 0);
+        const f = document.createElement('figure'), c = document.createElement('canvas'); c.width = SPR.W; c.height = SPR.H; c.getContext('2d').drawImage(SPR.frameCanvas(h, fr), 0, 0);
         const cap = document.createElement('figcaption'); cap.textContent = `${h.short} · ${lbl}`; f.append(c, cap); sh.append(f);
       }));
     }
@@ -449,6 +545,7 @@
   window.__fbs = {
     computeDrop, T, get S() { return S; }, start, drop, pause, resume, products: PRODUCTS,
     setMovingX(x) { if (S && S.moving) S.moving.x = x; }, setProduct(id) { if (S && S.moving) { const p = productById[id]; S.moving.p = p; S.moving.look = lookFor(p); S.moving.t = p.look.t; S.moving.speed = speedFor(p); } },
+    spot: { next: spotAdvance, render: spotRender, durationFor, get id() { return curP().id; }, get fact() { return curF() && curF().id; }, get shownAt() { return spot.shownAt; }, history: spot.history, bags: () => ({ p: pBag.st, f: fBag.st }) }, facts: FACTS, layoutBottom,
     freeze() { if (S && S.moving) S.moving.speed = 0; }, collection: () => [...collection],
   };
   boot();

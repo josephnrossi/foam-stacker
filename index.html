@@ -10,7 +10,19 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Board Stacker">
 <title>Foam Board Stacker (Demo)</title>
-<meta name="description" content="Demo game: stack foam boards as high as you can.">
+<meta name="description" content="Demo game: stack foam boards as high as you can. Demo for entertainment purposes only. Gilman Brothers and product names are trademarks of The Gilman Brothers Company.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Foam Board Stacker – a Gilman Brothers demo game">
+<meta property="og:description" content="Tap to drop foam boards, line them up for a Perfect, and collect all 16 Gilman Brothers boards. Demo for entertainment purposes only. Gilman Brothers and product names are trademarks of The Gilman Brothers Company.">
+<meta property="og:url" content="https://josephnrossi.github.io/foam-stacker/">
+<meta property="og:image" content="https://josephnrossi.github.io/foam-stacker/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Foam Board Stacker game with the Gilman Brothers logo">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Foam Board Stacker – a Gilman Brothers demo game">
+<meta name="twitter:description" content="Tap to drop foam boards, line them up for a Perfect, and collect all 16 Gilman Brothers boards. Demo for entertainment purposes only. Gilman Brothers and product names are trademarks of The Gilman Brothers Company.">
+<meta name="twitter:image" content="https://josephnrossi.github.io/foam-stacker/og-image.png">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -24,16 +36,20 @@
   <div class="scorebox"><div id="score" aria-live="polite">0</div><div id="best">Best 0</div></div>
   <button id="btnPause" class="icon-btn" aria-label="Pause">❚❚</button>
   <div id="nowBoard" aria-live="polite"></div>
+  <div id="deckBlurb" hidden></div>
 </div>
+<div id="bottomBar" hidden><div id="spotTicker" class="spot ticker" aria-live="off"></div><div id="factBar" class="fact"></div></div>
 
 <section id="start" class="screen">
   <img class="brand-logo" id="startLogo" alt="">
   <h1>Foam Board<br><span>Stacker</span></h1>
   <div class="hosts" id="startHosts"></div>
   <p class="lead">Tap to drop each board. Overhangs get trimmed. Line them up for a <b>Perfect</b>!</p>
+  <div id="spotStart" class="spot card-spot" aria-live="polite"></div>
   <button id="btnPlay" class="btn primary">Play</button>
   <button id="btnCollStart" class="btn">Board Collection <span class="cnt" id="collCountStart"></span></button>
-  <p class="foot"><span class="demo">Demo</span> <span id="footBrand"></span></p>
+  <p class="foot"><span class="demo">Demo</span> <span id="footBrand"></span> · <button id="btnLegalStart" class="link-btn">Legal</button></p>
+  <p class="legal-short">Demo for entertainment purposes only. Gilman Brothers and product names are trademarks of The Gilman Brothers Company.</p>
 </section>
 
 <section id="pause" class="screen" hidden>
@@ -42,6 +58,7 @@
   <button id="btnRestart" class="btn">Restart</button>
   <button id="btnCollPause" class="btn">Board Collection</button>
   <button id="btnHome" class="btn">Home</button>
+  <button id="btnLegalPause" class="btn">Legal</button>
   <p class="foot"><span class="demo">Demo</span> build – not an official app</p>
 </section>
 
@@ -51,9 +68,10 @@
   <div class="hosts small" id="overHosts"></div>
   <div class="final"><div class="lbl">Score</div><div id="finalScore">0</div><div id="finalMeta"></div><div id="newBest" hidden>New best!</div></div>
   <div id="unlockNote"></div>
+  <div id="spotOver" class="spot card-spot" aria-live="polite"></div>
   <button id="btnRetry" class="btn primary">Retry</button>
-  <button id="btnCollOver" class="btn">Board Collection</button>
-  <button id="btnHome2" class="btn">Home</button>
+  <div class="row"><button id="btnCollOver" class="btn">Collection</button><button id="btnHome2" class="btn">Home</button></div>
+  <p class="legal-short">Demo for entertainment purposes only. Gilman Brothers and product names are trademarks of The Gilman Brothers Company.</p>
 </section>
 
 <section id="coll" class="screen scroll" hidden>
@@ -66,10 +84,21 @@
   <p class="foot small" id="collFoot"></p>
 </section>
 
+<section id="legal" class="screen scroll" hidden>
+  <div class="coll-head"><h2>Legal</h2><button id="btnLegalClose" class="icon-btn" aria-label="Close legal">✕</button></div>
+  <div class="legal-body">
+    <p>Foam Board Stacker is a demo created for entertainment purposes only. It is not a commercial product and makes no offer, warranty, or representation about any product's performance, specifications, or suitability. In-game traits are playful interpretations of published product features and are not technical data. For actual product specifications, see gilmanbrothers.com.</p>
+    <p>The Gilman Brothers Company name and logo, and the product names shown in this game — including <span id="legalProducts"></span> — are registered trademarks or trademarks of The Gilman Brothers Company. All other trademarks are the property of their respective owners. Used for demonstration purposes.</p>
+    <p>Characters depicting company leadership are illustrative likenesses for entertainment only; speech bubbles are generic game messages, not quotes.</p>
+    <p>© 2026. All rights reserved.</p>
+  </div>
+</section>
+
 <section id="spriteSheet" hidden></section>
 
 <script src="config.js"></script>
 <script src="products.js"></script>
+<script src="facts.js"></script>
 <script src="sprites.js"></script>
 <script src="game.js"></script>
 </body>

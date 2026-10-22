@@ -37,6 +37,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "Extra-rigid styrene faces on 2.5x-density foam. Print it, ship it flat, then cold-bend it into 3D displays.",
   "trait": {
    "id": "clean-cut",
    "name": "Clean Cut",
@@ -71,6 +72,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "100% paper, 100% recyclable honeycomb board with I-beam-like rigidity: the eco alternative to plastic, metal and wood.",
   "trait": {
    "id": "featherweight",
    "name": "Featherweight",
@@ -105,6 +107,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "Bright white clay-coated foamboard whose Reveal® center holds its thickness. UV stabilized, warp and dent resistant.",
   "trait": {
    "id": "rain-shield",
    "name": "Rain Shield",
@@ -134,6 +137,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "The highest-density foam in the line. Double-thick liners resist crushing, warping and denting.",
   "trait": {
    "id": "heavy-duty",
    "name": "Heavy Duty",
@@ -182,6 +186,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "Colored clay-coated faces on the same Reveal® foam center. Smooth, lightweight and UV stabilized.",
   "trait": {
    "id": "color-pop",
    "name": "Color Pop",
@@ -211,6 +216,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "Embossed faux-canvas texture, 1- or 2-sided, that V-cuts cleanly for faux gallery wraps.",
   "trait": {
    "id": "v-cut-wrap",
    "name": "V-Cut Wrap",
@@ -240,6 +246,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "Economical 100% styrene sheets: dimensionally stable, impact resistant, and easy to cut, bend and bond.",
   "trait": {
    "id": "impact",
    "name": "Impact Resistant",
@@ -274,6 +281,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "Heat-activated adhesive on one side means no mounting tissues or films. Air Release Technology prevents bubbles.",
   "trait": {
    "id": "heat-bond",
    "name": "Heat Bond",
@@ -311,6 +319,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "Cold mounting, no heat required. Low-Tack repositions; High-Tack grabs immediately.",
   "trait": {
    "id": "self-adhesive",
    "name": "Self-Adhesive",
@@ -339,6 +348,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "Acid-free, PAT-compliant liners of 100% high alpha cellulose for preservation mounting and framing.",
   "trait": {
    "id": "archival",
    "name": "Archival",
@@ -374,6 +384,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "Bonds at just 130°F, the lowest bonding temperature per Gilman. Permanent, acid-free, no air entrapment.",
   "trait": {
    "id": "permanent",
    "name": "Permanent Bond",
@@ -404,6 +415,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "Mounts printed canvas and giclées that can't be stretched, with full tear strength in about 4 minutes in a vacuum press.",
   "trait": {
    "id": "quick-bond",
    "name": "Quick Bond",
@@ -433,6 +445,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "Velvety soft-touch board for direct digital printing, with a display-ready velvet black edge. 27% lighter.",
   "trait": {
    "id": "spring-back",
    "name": "Spring-Back",
@@ -462,6 +475,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "Permanent PSA on a soft-touch closed-cell core: Spring-Back technology, dent-proof finish, velvet black core.",
   "trait": {
    "id": "velvet-black",
    "name": "Velvet Black",
@@ -491,6 +505,7 @@ window.FBS_PRODUCTS = [
     ]
    ]
   },
+  "blurb": "Slidable, pressure-activated adhesive lets you reposition before it bonds. Air-release and display-ready within minutes.",
   "trait": {
    "id": "slide-align",
    "name": "Slide to Align",
@@ -520,6 +535,7 @@ window.FBS_PRODUCTS = [
    ],
    "colorNote": "Colour not stated on the site; drawn neutral grey."
   },
+  "blurb": "Removable wall fastener that holds up to ½ lb per sq. in. and comes off painted walls damage-free.",
   "trait": {
    "id": "hang-tight",
    "name": "Hang Tight",

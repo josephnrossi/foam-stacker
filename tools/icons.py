@@ -27,4 +27,5 @@ def make(size, maskable=False, rounded=False):
 make(192,rounded=True).save(os.path.join(root,'icons/icon-192.png'))
 make(512,rounded=True).save(os.path.join(root,'icons/icon-512.png'))
 make(512,maskable=True).save(os.path.join(root,'icons/icon-maskable-512.png'))
+make(192,maskable=True).save(os.path.join(root,'icons/icon-maskable-192.png'))
 make(180).convert('RGB').save(os.path.join(root,'icons/apple-touch-icon.png'))

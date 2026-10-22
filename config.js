@@ -6,10 +6,10 @@ window.FBS_CONFIG = {
   LOGO_SOURCE: 'https://gilmanbrothers.com/wp-content/uploads/2024/02/gilman-brothers-logo-complete.png',
   EMBLEM_SOURCE: 'https://gilmanbrothers.com/wp-content/uploads/2024/07/GilmanLogo3x6-900dpi.png',
   DEMO: true,
-  // Hosts. Neither person has an identified photo on gilmanbrothers.com, so both are neutral placeholder characters.
+  // Hosts, drawn as pixel art from the uncaptioned family photo on the Our History page (identified by the user).
   HOSTS: [
-    { id: 'evan', name: 'Evan Gilman', short: 'Evan', hat: '#f5c542', hatShade: '#cf9a22', shirt: '#2f6fd6', shirtShade: '#1f4fa3', pants: '#343a4f' },
-    { id: 'cyrus', name: 'Cyrus Gilman', short: 'Cyrus', hat: '#f2f4f7', hatShade: '#c4cad3', shirt: '#4a9be8', shirtShade: '#2f74bd', pants: '#a88d5f' },
+    { id: 'evan', name: 'Evan Gilman', short: 'Evan' },
+    { id: 'cyrus', name: 'Cyrus Gilman', short: 'Cyrus' },
   ],
   HOSTS_SOURCE: 'https://gilmanbrothers.com/our-history/',
 };
