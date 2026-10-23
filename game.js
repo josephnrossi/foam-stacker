@@ -23,16 +23,21 @@
     WX_MIN: 18, WX_MAX: 34, WX_MIN_FLOORS: 5, WX_LEN: 7, HEAT_DRIFT: 0.35, COLD_SPEED: 1.12, SNOW_SPEED: 1.06, CHIP_BELOW: 0.88,
     // v8 "New BOM ready": Evan tweaks the extruder every 16-30 s (from floor 6); the next 5 boards come out at 50-85% or 115-150% of the width below
     BOM_MIN: 16, BOM_MAX: 30, BOM_MIN_FLOORS: 6, BOM_LEN: 5, BOM_LO: 0.5, BOM_HI: 1.5,
+    // v9 skids + truckloads: a skid is full at 15 boards (it's forklifted off, a fresh pallet comes in); 12 skids = a truckload.
+    // Each truckload adds +0.5x to the bonus multiplier. Team Drivers (after the 1st truckload) boosts it 50% for 8 boards.
+    SKID_MAX: 15, SKIDS_PER_TRUCK: 12, TRUCK_STEP: 0.5, SKID_BONUS: 10, TRUCK_BONUS: 50, SKID_SWAP: 1.0,
+    TD_MIN: 25, TD_MAX: 45, TD_LEN: 8, TD_BOOST: 1.5,
   };
   // v8 ranks: you're promoted when BOTH your score and your trim quality (average % of each board that stayed on the stack) clear the bar
   const RANKS = [
     { name: 'Temp', icon: '🪪', score: 0, trim: 0 },
-    { name: 'Material Handler', icon: '📦', score: 10, trim: 55 },
-    { name: 'Lead', icon: '🔧', score: 25, trim: 65 },
-    { name: 'Shift Supervisor', icon: '📋', score: 45, trim: 72 },
-    { name: 'Manager', icon: '💼', score: 70, trim: 80 },
-    { name: 'Engineer', icon: '📐', score: 100, trim: 86 },
-    { name: 'Board Member', icon: '🏛️', score: 150, trim: 92 },
+    // v9: slower climb (skid + truckload bonuses and multipliers now feed the score); Board Member ≈ 3 truckloads of tidy stacking
+    { name: 'Material Handler', icon: '📦', score: 25, trim: 55 },
+    { name: 'Lead', icon: '🔧', score: 75, trim: 65 },
+    { name: 'Shift Supervisor', icon: '📋', score: 175, trim: 72 },
+    { name: 'Manager', icon: '💼', score: 350, trim: 80 },
+    { name: 'Engineer', icon: '📐', score: 650, trim: 86 },
+    { name: 'Board Member', icon: '🏛️', score: 1200, trim: 92 },
   ];
   function rankFor(score, trim) { let r = 0; RANKS.forEach((k, i) => { if (score >= k.score && trim >= k.trim) r = i; }); return r; }
 
@@ -43,6 +48,8 @@
   const pick = a => a[Math.floor(rnd() * a.length)];
   // random weather + BOM events are off in the deterministic test runs (?nobill / ?noevents) unless ?events is given
   const EVENTS = qs.has('events') || !(qs.has('nobill') || qs.has('noevents'));
+  // skids: 15 boards in play; the deterministic test runs (?nobill/?noevents) keep one endless skid unless ?skidmax=N is given
+  T.SKID_MAX = qs.has('skidmax') ? Math.max(2, +qs.get('skidmax') || 15) : EVENTS ? T.SKID_MAX : 1e6;
 
   // ---------- pure drop math (exported for tests) ----------
   // prev/cur: {x,w}. o: {perfectPx, stickPx, springBack, wrapPx}
@@ -91,6 +98,7 @@
     drop: P('drop'), slice: P('slice'), fall: P('fall'), perfect: P('perfect'), grow: P('grow'), over: P('over'), newBest: P('newBest'),
     extrude: P('extrude'), cut: P('cut'), bonus: P('bonus'), adhereEarn: P('adhereEarn'), adhereFasten: P('adhereFasten'),
     widwaw: P('widwaw'), billLeave: P('billLeave'), ui: P('ui'),
+    horn: P('horn'), skid: P('skid'), truckload: P('truckload'),
     bom: P('bom'), rankUp: P('rankUp'), chip: P('chip'), heat: P('heat'), cold: P('cold'), snow: P('snow'),
   };
   const buzz = ms => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
@@ -170,8 +178,10 @@
       wx: null, wxA: 0, wxType: null, wxNext: EVENTS ? T.WX_MIN + rnd() * (T.WX_MAX - T.WX_MIN) : Infinity, wxCount: 0, flakes: [], shimmer: 0,
       bom: null, bomNext: EVENTS ? T.BOM_MIN + rnd() * (T.BOM_MAX - T.BOM_MIN) : Infinity, bomCount: 0,
       trimSum: 0, trimN: 0, rank: 0, promo: null, popups: [], flashA: 0, chips: 0,
+      // v9
+      skids: 0, trucks: 0, boardsTotal: 0, skidOut: null, skidWait: 0, td: null, tdNext: Infinity, tdCount: 0, truckFx: null,
     };
-    spawn();
+    spawn(); updateTruckHud();
   }
   function top() { return S.stack[S.stack.length - 1]; }
   function speedFor(p) {
@@ -190,7 +200,7 @@
     if (bonus) w = Math.min(S.maxW, w + Math.round(12 * K()));
     // v8: Evan's extruder tweak ("New BOM ready")
     if (S.bom && S.bom.left <= 0) endBom();
-    if (!S.bom && S.playT >= S.bomNext && S.floors >= T.BOM_MIN_FLOORS && !(S.bill && S.bill.on)) startBom();
+    if (!S.bom && !S.td && S.playT >= S.bomNext && S.floors >= T.BOM_MIN_FLOORS && !(S.bill && S.bill.on)) startBom();
     let bomF = 0;
     if (S.bom && !bonus) {
       bomF = rnd() < 0.5 ? T.BOM_LO + rnd() * 0.35 : T.BOM_HI - rnd() * 0.35; // never ~100%: the change is always visible
@@ -269,11 +279,13 @@
     if (id === 'velvet-black') pts += 5;
     if (m.bonus) { pts += 5; }
     if (id === 'rain-shield' && S.rain > 0) pts *= 2;
+    { const bm = bonusMult(); if (bm > 1 && pts > floorsAdd) pts = floorsAdd + Math.round((pts - floorsAdd) * bm); } // v9 truckload multiplier on the bonus part
     if (S.bill && S.bill.on) pts *= T.BILL_SCORE; // WIDWAW: every board is worth 2x (multiplies trait bonuses)
-    S.lastPts = pts; S.score += pts; S.floors += floorsAdd; S.height = S.stack.length - 1;
+    S.lastPts = pts; S.score += pts; S.floors += floorsAdd; S.boardsTotal++; S.height = S.boardsTotal;
     popup('+' + pts, board, r.perfect ? '#f5c542' : '#e9edf5'); dust(board);
     if (S.rain > 0) S.rain--;
     if (S.wx) { S.wx.left--; if (S.wx.left <= 0) endWeather(); }
+    if (S.td) { S.td.left--; updateTdBar(); if (S.td.left <= 0) endTD(); }
     { const nr = rankFor(S.score, trimPct()); if (nr > S.rank) { S.rank = nr; promote(nr); } }
     if (S.floors >= T.RAIN_EVERY && S.rain === 0 && !S.bill && !S.wx && Math.floor(S.floors / T.RAIN_EVERY) > (S.rainCount || 0)) { S.rainCount = Math.floor(S.floors / T.RAIN_EVERY); S.rain = T.RAIN_LEN; host(1, 'idle', 'Rain! ☔ Watch out'); }
     const ms = Math.floor(S.floors / T.MILESTONE); if (ms > (S.msCount || 0)) { S.msCount = ms; S.bonusNext = true; host(ms % 2, 'cheer', 'Bonus board for you!'); sfx.bonus(); }
@@ -281,9 +293,53 @@
     if (S.earnNow) { S.earnNow = false; earnAdhere(); } // after the card toast so the ADHERE™ pop-up isn't overwritten
     $('score').textContent = S.score;
     S.camT = camTarget(board.y + board.t);
-    spawn();
+    if (S.stack.length - 1 >= T.SKID_MAX) completeSkid(); else spawn();
+    updateTruckHud();
+  }
+  // ---------- v9 skids, truckloads, Team Drivers ----------
+  const bonusMult = () => (1 + T.TRUCK_STEP * ((S && S.trucks) || 0)) * (S && S.td ? T.TD_BOOST : 1);
+  function completeSkid() {
+    const G = geo(), oldCam = S.cam;
+    S.skids++; const full = S.skids % T.SKIDS_PER_TRUCK === 0;
+    S.skidOut = { stack: S.stack, cam: oldCam, t: 0 }; S.moving = null; S.skidWait = T.SKID_SWAP;
+    S.stack = [{ x: (S.SW - G.bw) / 2, w: G.bw, y: 0, t: G.palletT, base: true }]; S.cam = S.camT = 0; S.flashes = [];
+    for (const f of S.falling) f.y -= oldCam; for (const q of S.parts) q.y -= oldCam; for (const u of S.popups) u.wy -= oldCam; // keep them where they are on screen
+    let pts = Math.round(T.SKID_BONUS * bonusMult());
+    if (full) { S.trucks++; pts += Math.round(T.TRUCK_BONUS * bonusMult()); S.truckFx = { t: 0 }; if (S.trucks === 1 && EVENTS) S.tdNext = S.playT + T.TD_MIN + rnd() * (T.TD_MAX - T.TD_MIN);
+      host(0, 'cheer', 'Truckload!'); host(1, 'cheer', 'Bonuses ×' + fmtM(1 + T.TRUCK_STEP * S.trucks), true); toast(`Truckload ${S.trucks}! Bonuses now ×${fmtM(1 + T.TRUCK_STEP * S.trucks)}`, '🚚 '); sfx.truckload(); buzz([20, 40, 20, 40]); }
+    else { host(1, 'cheer', 'Skid complete!'); toast(`Skid ${S.skids % T.SKIDS_PER_TRUCK}/${T.SKIDS_PER_TRUCK} loaded · fresh pallet`, '📦 '); sfx.skid(); buzz([10, 20, 10]); }
+    S.score += pts; $('score').textContent = S.score; S.popups.push({ text: (full ? 'Truckload +' : 'Skid +') + pts, x: sceneW() / 2, wy: S.stack[0].t + 40, t: 0, life: 1.4, col: '#7cf0a5' });
+    { const nr = rankFor(S.score, trimPct()); if (nr > S.rank) { S.rank = nr; promote(nr); } }
+    updateTruckHud();
+  }
+  function fitScore() { // v9: scale the score digits down (layout unchanged, never below 55%) so they never run under the truck HUD
+    const sc = $('score'), th = $('truckHud'); if (!sc || !th) return; sc.style.transform = '';
+    const t = th.getBoundingClientRect(); if (!t.width) return; const rg = document.createRange(); rg.selectNodeContents(sc); const r = rg.getBoundingClientRect(); if (!r.width) return;
+    if (t.bottom <= r.top || t.top >= r.bottom || r.left >= t.right + 6) return; // not in the same row, or already clear
+    const cx = r.left + r.width / 2, k = Math.max(0.55, Math.min(1, (cx - (t.right + 6)) / (r.width / 2)));
+    sc.style.transformOrigin = '50% 50%'; sc.style.transform = 'scale(' + k.toFixed(3) + ')';
+  }
+  if (window.MutationObserver) new MutationObserver(() => fitScore()).observe($('score'), { childList: true, characterData: true, subtree: true });
+  window.addEventListener('resize', () => requestAnimationFrame(fitScore));
+  const fmtM = m => (Math.round(m * 100) / 100).toString().replace(/(\.\d)0$/, '$1');
+  function startTD() {
+    if (!S || S.td || !S.trucks) return; S.td = { left: T.TD_LEN }; S.tdCount++;
+    host(1, 'cheer', 'Team Drivers!'); $('tdBanner').hidden = false; $('tdMult').textContent = '×' + fmtM(bonusMult()); updateTdBar(); sfx.horn(); buzz([10, 30, 10]); updateTruckHud();
+  }
+  function endTD() { if (!S || !S.td) return; S.td = null; $('tdBanner').hidden = true; S.tdNext = S.playT + T.TD_MIN + rnd() * (T.TD_MAX - T.TD_MIN); updateTruckHud(); }
+  function updateTdBar() { const el = $('tdBar'); if (el && S && S.td) el.style.width = (S.td.left / T.TD_LEN * 100).toFixed(1) + '%'; }
+  const TRUCK_SVG = '<svg viewBox="0 0 22 12" width="22" height="12" aria-hidden="true" shape-rendering="crispEdges"><rect x="0" y="1" width="13" height="7" fill="#eef0f3"/><rect x="1" y="2" width="11" height="1" fill="#f5c542"/><rect x="13" y="3" width="6" height="5" fill="#2f6fd6"/><rect x="15" y="4" width="3" height="2" fill="#bfe0ff"/><rect x="19" y="6" width="2" height="2" fill="#2f6fd6"/><rect x="0" y="8" width="21" height="1" fill="#3b4052"/><rect x="2" y="9" width="3" height="3" fill="#141824"/><rect x="8" y="9" width="3" height="3" fill="#141824"/><rect x="15" y="9" width="3" height="3" fill="#141824"/></svg>';
+  function updateTruckHud() {
+    const el = $('truckHud'); if (!el || !S) return; const n = S.skids % T.SKIDS_PER_TRUCK + 1, b = S.stack.length - 1;
+    $('truckRow').innerHTML = S.trucks ? TRUCK_SVG + (S.trucks > 1 ? '<b>×' + S.trucks + '</b>' : '') + '<i class="' + (S.td ? 'td' : '') + '">x' + fmtM(bonusMult()) + '</i>' : '';
+    $('truckRow').hidden = !S.trucks; $('skidRow').textContent = `Skid ${n}/${T.SKIDS_PER_TRUCK}`; $('skidBar').style.width = (b / T.SKID_MAX * 100).toFixed(1) + '%';
+    el.classList.toggle('td', !!S.td); el.dataset.trucks = S.trucks; el.dataset.mult = bonusMult(); fitScore();
   }
   function camTarget(topY) { // keep the stack top ~45% down the free play area between the HUD and the ground
+    // v8.1 landscape: one constant working level. The top of the stack always sits where the pallet's top deck (the hosts'
+    // waists) is in the opening view, from the first board on; the stack scrolls down underneath it. (v8 and earlier let the
+    // top climb ~35-65 px toward the HUD for the first 15-20 boards, then scrolled the pallet and hosts off the bottom.)
+    if (LANDSCAPE()) return Math.max(0, topY - palletTH());
     const g = groundY(), E = geo().hh, hopper = Math.round(E * 0.78) + 24; // extruder hopper + name plate above the stack top
     let hudB;
     if (LANDSCAPE()) { // the hopper sits beside the centred HUD column, so only the score/pill above the stack and the screen top matter
@@ -338,8 +394,8 @@
   }
   const trimPct = () => (S && S.trimN ? Math.round(S.trimSum / S.trimN * 100) : 100);
   function promote(i) {
-    const k = RANKS[i]; S.promo = { text: 'Promoted: ' + k.name, icon: k.icon, t: 0, life: 2.2 };
-    for (let n = 0; n < 44; n++) S.parts.push({ x: rnd() * sceneW(), y: S.cam + groundY() - rnd() * H * 0.25, vx: (rnd() - 0.5) * 90, vy: 20 + rnd() * 60, life: 1.6 + rnd() * 0.6, t: 0, col: pick(['#f5c542', '#7cf0a5', '#8fb8ff', '#ff8fa3', '#ffffff']), sz: 4, g: 0.12, conf: true, rot: rnd() * 6 }); // confetti
+    const k = RANKS[i]; S.promo = { text: 'Promoted: ' + k.name, icon: k.icon, t: 0, life: 1.6 };
+    for (let n = 0; n < 16; n++) S.parts.push({ x: sceneW() / 2 + (rnd() - 0.5) * 160, y: S.cam + groundY() - promoY() - 12, vx: (rnd() - 0.5) * 120, vy: 30 + rnd() * 50, life: 0.9 + rnd() * 0.4, t: 0, col: pick(['#f5c542', '#7cf0a5', '#8fb8ff', '#ff8fa3', '#ffffff']), sz: 4, g: 0.12, conf: true, rot: rnd() * 6 }); // confetti
     sfx.rankUp(); buzz([10, 30, 10]);
   }
   // ---------- v8 weather ----------
@@ -399,7 +455,11 @@
   const boost = () => (S && S.bill && S.bill.on ? T.BILL_BOOST : 1); // applied on top of the board's own speed, so the exit restores it exactly
   // hosts stand in front of the pallet with their midsection on its top deck: world y of the waist = pallet top (stack[0].t).
   // Same anchor for Evan, Cyrus and Bill, scrolled by the same camera as the stack.
-  function hostPos(i) { const G = geo(), x = i === 0 ? 8 : sceneW() - 8 - G.hw, wy = palletTH(); return { x, wy, y: Math.round((S ? sy(wy) : groundY() - wy) - G.hh / 2), w: G.hw, h: G.hh }; }
+  // portrait: hosts ride with the pallet (waist on its top deck). landscape (v8.1): hosts stay at the constant working level –
+  // the same spot as the pallet top in the opening view – on a steel mezzanine once the floor scrolls away beneath them.
+  const workLevel = () => groundY() - palletTH(); // screen y of the working level (pallet top at cam 0)
+  function hostPos(i) { const G = geo(), x = i === 0 ? 8 : sceneW() - 8 - G.hw, land = LANDSCAPE() && S, wy = palletTH() + (land ? S.cam : 0);
+    return { x, wy, y: Math.round((land ? workLevel() : S ? sy(wy) : groundY() - wy) - G.hh / 2), w: G.hw, h: G.hh }; }
   function hostSlot() { const h = hostPos(1); return { x: h.x + h.w / 2, wy: h.wy }; }
   function startBill() {
     if (!S || S.bill) return;
@@ -415,7 +475,7 @@
   }
   function updateBill(dt) {
     const b = S.bill;
-    if (!b) { if (S.playT >= S.billNext && S.floors >= T.BILL_MIN_FLOORS && !(S.rain > 0)) startBill(); return; }
+    if (!b) { if (S.playT >= S.billNext && S.floors >= T.BILL_MIN_FLOORS && !(S.rain > 0) && !S.td && !S.skidWait) startBill(); return; }
     if (b.on) { b.t += dt; if (b.phase === 'in' && b.t >= T.POOF) b.phase = 'on'; updateBillBar(); if (b.t >= b.dur) endBill(); }
     else { b.outT += dt; if (b.outT >= T.POOF) { S.bill = null; S.billNext = S.playT + T.BILL_MIN + rnd() * (T.BILL_MAX - T.BILL_MIN); } }
   }
@@ -451,6 +511,12 @@
     for (const h of S.hostState) { if (h.anim === 'cheer') { h.t -= dt; if (h.t <= 0) h.anim = 'idle'; } if (h.bubble) { h.bubble.t -= dt; if (h.bubble.t <= 0) h.bubble = null; } }
     if (S.mode === 'play') { S.playT += dt; updateBill(dt); }
     if (S.mode === 'play' || S.mode === 'dying' || S.mode === 'over') updateWeather(dt);
+    if (S.skidOut) { S.skidOut.t += dt; if (S.skidOut.t > T.SKID_SWAP + 0.2) S.skidOut = null; }
+    if (S.truckFx) { S.truckFx.t += dt; if (S.truckFx.t > 2.6) S.truckFx = null; }
+    if (S.mode === 'play') {
+      if (S.skidWait > 0) { S.skidWait -= dt; if (S.skidWait <= 0) { S.skidWait = 0; spawn(); } }
+      if (!S.td && S.trucks && S.playT >= S.tdNext && !S.bill && !S.bom && !S.skidWait) startTD();
+    }
     for (let i = S.popups.length - 1; i >= 0; i--) { const u = S.popups[i]; u.t += dt; if (u.t > u.life) S.popups.splice(i, 1); }
     if (S.promo) { S.promo.t += dt; if (S.promo.t > S.promo.life) S.promo = null; }
     if (S.flashA > 0) S.flashA = Math.max(0, S.flashA - dt * 0.6);
@@ -622,6 +688,7 @@
       // pop-in bounce: Bill on arrival, Cyrus on return
       const popT = i === 1 && b ? (b.on ? b.t : b.outT) : -1, popY = popT >= 0 && popT < T.POOF + 0.25 ? -Math.round(Math.abs(Math.sin(Math.min(1, popT / (T.POOF + 0.25)) * Math.PI * 1.5)) * 16 * (1 - popT / (T.POOF + 0.25))) : 0;
       if (S) (S.hostRects || (S.hostRects = []))[i] = { x, y, w: hw, h: hh, ox: sceneX() };
+      if (S) { const fy = Math.round(sy(0)), feet = y + hh + 2; if (fy > feet + 3) drawMezz(x - 6, feet, hw + 12, Math.min(fy, H + 10)); } // landscape: catwalk under the hosts
       ctx.fillStyle = '#00000066'; ctx.beginPath(); ctx.ellipse(x + hw / 2, y + hh + 1, hw * 0.45, 3, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#2a2f3e'; ctx.fillRect(x - 4, y + hh + 2, hw + 8, 2);
       ctx.imageSmoothingEnabled = false; ctx.drawImage(SPR.frameCanvas(h, fr), Math.round(x), Math.round(y + popY), hw, hh);
@@ -631,6 +698,11 @@
       ctx.fillStyle = '#9aa3b7'; ctx.font = '600 11px -apple-system,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText(h.short, x + hw / 2, y + hh + 13);
       if (st.bubble) bubble(st.bubble.text, x + hw / 2, y - 4, i === 0 ? 'left' : 'right', Math.min(1, st.bubble.t * 4));
     });
+  }
+  function drawMezz(x, top, w, floor) { // steel mezzanine deck + legs + braces down to the warehouse floor
+    ctx.fillStyle = '#262a36'; ctx.fillRect(x + 3, top + 6, 5, floor - top - 6); ctx.fillRect(x + w - 8, top + 6, 5, floor - top - 6);
+    ctx.strokeStyle = '#323748'; ctx.lineWidth = 2; ctx.beginPath(); for (let yy = top + 10; yy + 24 < floor; yy += 26) { ctx.moveTo(x + 6, yy); ctx.lineTo(x + w - 6, yy + 24); ctx.moveTo(x + w - 6, yy); ctx.lineTo(x + 6, yy + 24); } ctx.stroke();
+    ctx.fillStyle = '#3d4458'; ctx.fillRect(x, top, w, 6); ctx.fillStyle = '#5a627a'; ctx.fillRect(x, top, w, 1); ctx.fillStyle = '#f5c54299'; for (let i = 2; i < w - 4; i += 8) ctx.fillRect(x + i, top + 4, 4, 2); // deck with a hazard edge
   }
   function bubble(text, cx, by, side, a) {
     ctx.save(); ctx.globalAlpha = a; ctx.font = '700 13px -apple-system,system-ui,sans-serif';
@@ -680,6 +752,7 @@
         if (wxT === 'snow' && fromTop === 0) { const yt = yb - b.t; ctx.fillStyle = `rgba(250,252,255,${0.95 * wxA})`; ctx.beginPath(); ctx.moveTo(b.x - 1, yt + 1); for (let i = 0; i <= 8; i++) ctx.lineTo(b.x + i * b.w / 8, yt - 2 - ((i * 5) % 3)); ctx.lineTo(b.x + b.w + T.DEPTH_X, yt - T.DEPTH_Y - 1); ctx.lineTo(b.x + T.DEPTH_X, yt - T.DEPTH_Y - 2); ctx.closePath(); ctx.fill(); }
       }
     }
+    if (S.skidOut) drawSkidOut(S.skidOut); // in front of the fresh pallet so the forklift and the outgoing skid read clearly
     for (const f of S.falling) {
       const yb = sy(f.y); ctx.save(); ctx.translate(f.x + f.w / 2, yb - f.t / 2); ctx.rotate(f.rot); ctx.globalAlpha = 0.95;
       drawBoard(-f.w / 2, f.t / 2, f.w, f.t, f.look, f.p, { noPrint: f.w < 60 }); ctx.restore();
@@ -711,13 +784,37 @@
     for (const u of S.popups) { const k = u.t / u.life, py = sy(u.wy) - k * 34; ctx.globalAlpha = Math.max(0, 1 - k * k); ctx.font = `900 ${Math.round(15 + (1 - k) * 3)}px -apple-system,system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#0d0f16cc'; ctx.strokeText(u.text, u.x, py); ctx.fillStyle = u.col; ctx.fillText(u.text, u.x, py); }
     ctx.globalAlpha = 1;
     if (S.rainDrops.length) { ctx.strokeStyle = '#8fb8ff66'; ctx.lineWidth = 1.2; ctx.beginPath(); for (const d of S.rainDrops) { ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + 4, d.y - 14); } ctx.stroke(); }
-    if (S.combo >= 2 && S.mode === 'play') { ctx.fillStyle = '#f5c542'; ctx.font = `800 ${15 + Math.round(Math.max(0, (S.flashA || 0)) * 20)}px -apple-system,system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.fillText('Perfect ×' + S.combo, sceneW() / 2, (S.moving ? sy(S.moving.y) - S.moving.t - T.DEPTH_Y - 18 : H * 0.35)); }
+    if (S.combo >= 2 && S.mode === 'play' && !(S.promo && LANDSCAPE())) { ctx.fillStyle = '#f5c542'; ctx.font = `800 ${15 + Math.round(Math.max(0, (S.flashA || 0)) * 20)}px -apple-system,system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.fillText('Perfect ×' + S.combo, sceneW() / 2, (S.moving ? sy(S.moving.y) - S.moving.t - T.DEPTH_Y - 18 : H * 0.35)); }
     drawHosts(); drawPoofs();
     drawWeatherFront(wxT, wxA);
     ctx.restore();
     if (S.flashA > 0) { ctx.fillStyle = `rgba(255,248,220,${S.flashA})`; ctx.fillRect(0, 0, W, H); }
     if (wxT && wxA > 0.01) drawWeatherScreen(wxT, wxA);
+    if (S.truckFx) drawTruckBy(S.truckFx);
+    { const nb = $('nowBoard'), hide = !!(S.promo && LANDSCAPE()) ? 'hidden' : ''; if (nb && nb.style.visibility !== hide) nb.style.visibility = hide; }
     if (S.promo) drawPromo(S.promo);
+  }
+  function drawSkidOut(o) { // the full skid is lifted a touch and forklifted off to the right
+    const k = Math.min(1, o.t / T.SKID_SWAP), dx = Math.pow(k, 1.8) * (W + 60), lift = Math.min(1, k * 4) * 6, saveCam = S.cam, keep = { r: S.palletRect, t: S.palletTopY, f: S.floorY };
+    ctx.save(); ctx.translate(dx, -lift); S.cam = o.cam; ctx.globalAlpha = 1 - Math.max(0, k - 0.7) / 0.3 * 0.6;
+    for (const b of o.stack) { if (b.base) { const yb = Math.round(sy(b.y)); if (yb > -40 && yb - b.t < H + 40) { drawPalletOnly(b); drawForklift(b.x - 8, yb); } continue; } const yb = sy(b.y); if (yb < -60 || yb - b.t > H + 40) continue; drawBoard(b.x, yb, b.w, b.t, b.look, b.p); }
+    const tp = o.stack[o.stack.length - 1], ty = sy(tp.y + tp.t) - T.DEPTH_Y - 6; ctx.fillStyle = '#7cf0a5'; ctx.font = '900 13px -apple-system,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText('✓ SKID ' + (((S.skids - 1) % T.SKIDS_PER_TRUCK) + 1) + '/' + T.SKIDS_PER_TRUCK, tp.x + tp.w / 2, ty);
+    S.cam = saveCam; S.palletRect = keep.r; S.palletTopY = keep.t; S.floorY = keep.f; ctx.restore();
+  }
+  function drawPalletOnly(b) { drawPallet(b); }
+  function drawForklift(x, yb) { // little yellow forklift on the pallet's left, tines under the deck
+    const y = yb; ctx.fillStyle = '#f5c542'; ctx.fillRect(x - 34, y - 26, 26, 18); ctx.fillStyle = '#c99a24'; ctx.fillRect(x - 34, y - 10, 26, 3);
+    ctx.fillStyle = '#2b303f'; ctx.fillRect(x - 30, y - 40, 2, 16); ctx.fillRect(x - 14, y - 40, 2, 16); ctx.fillRect(x - 30, y - 41, 18, 2); // cage
+    ctx.fillStyle = '#3b4052'; ctx.fillRect(x - 8, y - 44, 3, 44); ctx.fillStyle = '#9aa3b7'; ctx.fillRect(x - 5, y - 6, 14, 2); // mast + tines
+    ctx.fillStyle = '#141824'; for (const wx of [x - 30, x - 16]) { ctx.beginPath(); ctx.arc(wx, y - 4, 5, 0, Math.PI * 2); ctx.fill(); }
+  }
+  function drawTruckBy(f) { // a box truck drives across under the HUD on a truckload
+    const k = f.t / 2.6, s = Math.max(2, Math.round(Math.min(W, 600) / 160)), w = 22 * s, x = -w + k * (W + w * 2), y = Math.round(H * (LANDSCAPE() ? 0.3 : 0.36));
+    ctx.save(); ctx.translate(Math.round(x), y); ctx.scale(s, s);
+    const R = (a, b, c, d, col) => { ctx.fillStyle = col; ctx.fillRect(a, b, c, d); };
+    R(0, 1, 13, 7, '#eef0f3'); R(1, 2, 11, 1, '#f5c542'); R(13, 3, 6, 5, '#2f6fd6'); R(15, 4, 3, 2, '#bfe0ff'); R(19, 6, 2, 2, '#2f6fd6'); R(0, 8, 21, 1, '#3b4052');
+    R(2, 9, 3, 3, '#141824'); R(8, 9, 3, 3, '#141824'); R(15, 9, 3, 3, '#141824'); ctx.restore();
+    ctx.fillStyle = '#f5c542'; ctx.font = '900 12px -apple-system,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText('TRUCKLOAD ' + S.trucks + ' · bonuses ×' + fmtM(1 + T.TRUCK_STEP * S.trucks), Math.round(x + w / 2), y - 6);
   }
   function drawWeatherFront(ty, a) { // scene space: snowflakes, heat shimmer
     if (S.flakes.length) { ctx.fillStyle = '#ffffff'; for (const f of S.flakes) { ctx.globalAlpha = 0.85 * Math.max(a, 0.3); ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.fill(); } ctx.globalAlpha = 1; }
@@ -734,13 +831,18 @@
     for (const [cx, cy] of [[8, 8], [W - 8, 8], [8, H - 8], [W - 8, H - 8]]) for (let i = 0; i < 3; i++) { const r = 10 + i * 9, ox = cx + (cx < W / 2 ? r : -r), oy = cy + (cy < H / 2 ? r * 0.6 : -r * 0.6); for (let k = 0; k < 3; k++) { const an = k * Math.PI / 3; ctx.moveTo(ox - Math.cos(an) * 5, oy - Math.sin(an) * 5); ctx.lineTo(ox + Math.cos(an) * 5, oy + Math.sin(an) * 5); } }
     ctx.stroke();
   }
-  function drawPromo(p) { // rank-up banner
-    const k = p.t / p.life, inK = Math.min(1, p.t / 0.25), outA = k > 0.8 ? (1 - k) / 0.2 : 1, y = Math.round(H * 0.42), sc = 0.7 + 0.3 * (1 - Math.pow(1 - inK, 3));
-    ctx.save(); ctx.globalAlpha = outA; ctx.translate(W / 2, y); ctx.scale(sc, sc);
-    ctx.font = '900 20px -apple-system,system-ui,sans-serif'; const txt = p.icon + '  ' + p.text, tw = Math.min(ctx.measureText(txt).width, W * 0.8) + 36;
-    ctx.fillStyle = '#0d0f16e6'; roundRect(-tw / 2, -26, tw, 52, 16); ctx.fill(); ctx.strokeStyle = '#f5c542'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#9aa3b7'; ctx.font = '800 10px -apple-system,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText('RANK UP', 0, -10);
-    ctx.fillStyle = '#ffd75e'; ctx.font = '900 20px -apple-system,system-ui,sans-serif'; ctx.fillText(txt, 0, 14, W * 0.8); ctx.restore();
+  function drawPromo(p) { // v9: compact rank-up toast just under the HUD, clear of the stack and drop line
+    const k = p.t / p.life, a = Math.min(1, p.t / 0.18) * (k > 0.8 ? (1 - k) / 0.2 : 1), slide = (1 - Math.min(1, p.t / 0.22)) * -8;
+    ctx.save(); ctx.globalAlpha = a; ctx.font = '800 12.5px -apple-system,system-ui,sans-serif';
+    const txt = p.icon + ' ' + p.text, tw = Math.min(ctx.measureText(txt).width, W * 0.7) + 22, h = 24, y = Math.round(promoY() + slide), x = Math.round(W / 2 - tw / 2);
+    ctx.fillStyle = '#0d0f16ee'; roundRect(x, y, tw, h, 12); ctx.fill(); ctx.strokeStyle = '#f5c542'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#ffd75e'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, W / 2, y + h / 2 + 1, W * 0.7); ctx.restore();
+    if (S) S.promoRect = { x, y, w: tw, h };
+  }
+  function promoY() { // portrait: under the HUD and under any Bill / Team Drivers banner; landscape: in place of the board-name pill (hidden meanwhile)
+    if (LANDSCAPE()) { const r = $('nowBoard').getBoundingClientRect(); return r.height ? Math.round(r.top + (r.height - 24) / 2) : safeTop + 70; }
+    let b = 0; for (const id of ['hud', 'billBanner', 'tdBanner']) { const e = $(id); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.height) b = Math.max(b, r.bottom); }
+    return (b || safeTop + 120) + 6;
   }
 
   // ---------- loop ----------
@@ -830,13 +932,13 @@
   const screens = ['start', 'pause', 'over', 'coll', 'legal'];
   function show(id) { for (const s of screens) $(s).hidden = s !== id; $('hud').hidden = !(S && (S.mode === 'play' || S.mode === 'dying' || S.mode === 'pause') && (id == null || id === 'pause')); $('bottomBar').hidden = $('hud').hidden; if ($('hud').hidden) $('deckBlurb').hidden = true; layoutBottom(); }
   let collReturn = 'start';
-  function start() { ac(); AU.setFast(false); newGame(); $('score').textContent = '0'; $('best').textContent = 'Best ' + best(); show(null); $('rescue').hidden = true; $('billBanner').hidden = true; updateAdhere(); host(0, 'cheer', 'Let\u2019s stack!'); }
+  function start() { ac(); AU.setFast(false); newGame(); $('score').textContent = '0'; $('best').textContent = 'Best ' + best(); show(null); $('rescue').hidden = true; $('billBanner').hidden = true; $('tdBanner').hidden = true; updateAdhere(); host(0, 'cheer', 'Let\u2019s stack!'); }
   function pause() { if (!S || S.mode !== 'play') return; S.mode = 'pause'; show('pause'); }
   function resume() { if (!S || S.mode !== 'pause') return; S.mode = 'play'; last = performance.now(); show(null); }
-  function gameOver() { $('rescue').hidden = true; $('billBanner').hidden = true;
+  function gameOver() { $('rescue').hidden = true; $('billBanner').hidden = true; $('tdBanner').hidden = true;
     S.mode = 'over'; const b = best(), nb = S.score > b; if (nb) store.set(LS.best, S.score); if (nb && b > 0) sfx.newBest(); else sfx.over();
     $('finalScore').textContent = S.score;
-    $('finalMeta').textContent = `Height ${S.height} boards · ${S.perfects} perfect${S.perfects === 1 ? '' : 's'} · best ${Math.max(b, S.score)}`;
+    $('finalMeta').textContent = `${S.height} boards · ${S.skids} skid${S.skids === 1 ? '' : 's'}${S.trucks ? ' · ' + S.trucks + ' truckload' + (S.trucks > 1 ? 's' : '') : ''} · ${S.perfects} perfect${S.perfects === 1 ? '' : 's'} · best ${Math.max(b, S.score)}`;
     $('newBest').hidden = !nb;
     { // v8 rank: the highest rank reached this run (score AND trim quality); best rank kept on this device
       const ri = Math.max(S.rank, rankFor(S.score, trimPct())), k = RANKS[ri], bestR = Math.max(ri, store.get(LS.rank, 0)), newR = ri > store.get(LS.rank, 0); store.set(LS.rank, bestR);
@@ -951,14 +1053,15 @@
   }
   // test hooks
   window.__fbs = {
-    computeDrop, computeDropBom, RANKS, rankFor, trimPct, startWeather, endWeather, startBom, endBom, promote: i => promote(i), wxSpeed: () => wxSpeed(), T, geo, audio: AU, startBill, endBill, boost, updateBill, boards: BOARDS, toggleAdhere, earnAdhere: () => earnAdhere(), rescue, get S() { return S; }, start, drop, pause, resume, products: PRODUCTS,
+    computeDrop, computeDropBom, RANKS, rankFor, trimPct, startWeather, endWeather, startBom, endBom, promote: i => promote(i), completeSkid: () => completeSkid(), startTD: () => startTD(), endTD: () => endTD(), bonusMult, updateTruckHud, wxSpeed: () => wxSpeed(), T, geo, audio: AU, startBill, endBill, boost, updateBill, boards: BOARDS, toggleAdhere, earnAdhere: () => earnAdhere(), rescue, get S() { return S; }, start, drop, pause, resume, products: PRODUCTS,
     setMovingX(x) { if (S && S.moving) S.moving.x = x; }, setProduct(id, gl) { if (S && S.moving) { const p = productById[id]; S.moving.p = p; S.moving.look = lookFor(p); const g = (gl && p.gauges.find(x => x.label === gl)) || p.gauges[0]; S.moving.gauge = g; S.moving.t = thickFor(g); S.lineName = p.name + ' · ' + g.label; S.moving.speed = speedFor(p); } },
     spot: { next: spotAdvance, render: spotRender, durationFor, get id() { return curP().id; }, get fact() { return curF() && curF().id; }, get shownAt() { return spot.shownAt; }, history: spot.history, bags: () => ({ p: pBag.st, f: fBag.st }) }, facts: FACTS, layoutBottom,
     finishExtrusion() { return new Promise(r => { const c = () => (!S || !S.moving || !S.moving.extrude) ? r() : requestAnimationFrame(c); c(); }); },
     freeze() { if (S && S.moving) S.moving.speed = 0; },
     align() { // screen-space alignment snapshot (scene x offset applied) for the v6 anchor tests
       if (!S || !S.hostRects || S.palletTopY == null) return null; const ox = sceneX(), pr = S.palletRect;
-      return { W, H, cam: S.cam, camT: S.camT, floors: S.stack.length - 1, palletTop: S.palletTopY, floorY: S.floorY, palletL: pr.x + ox, palletR: pr.x + pr.w + ox, bottomUI, slot1: S.slot1,
+      const tp = S.stack[S.stack.length - 1];
+      return { land: LANDSCAPE(), workLevel: workLevel(), topY: sy(tp.y + tp.t), W, H, cam: S.cam, camT: S.camT, floors: S.stack.length - 1, palletTop: S.palletTopY, floorY: S.floorY, palletL: pr.x + ox, palletR: pr.x + pr.w + ox, bottomUI, slot1: S.slot1,
         hosts: S.hostRects.map(h => ({ x: h.x + h.ox, w: h.w, mid: h.y + h.h / 2, top: h.y })), stackL: S.stack[S.stack.length - 1].x + ox };
     }, collection: () => [...collection],
   };

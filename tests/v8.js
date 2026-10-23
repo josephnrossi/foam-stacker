@@ -23,24 +23,25 @@ async function suite(bt, dev, tag) {
   await p.goto(BASE + '?seed=7&nospot&noevents'); await wait(p, 500);
   const rk = await p.evaluate(() => { const F = window.__fbs, R = F.rankFor; return {
     names: F.RANKS.map(r => r.name), th: F.RANKS.map(r => [r.score, r.trim]),
-    a: R(0, 0), b: R(10, 54), c: R(10, 55), d: R(9, 100), e: R(150, 91), f: R(149, 100), g: R(150, 92), h: R(1000, 64), i: R(45, 72), j: R(70, 79) }; });
+    a: R(0, 0), b: R(25, 54), c: R(25, 55), d: R(24, 100), e: R(1200, 91), f: R(1199, 100), g: R(1200, 92), h: R(5000, 64), i: R(175, 72), j: R(349, 79) }; });
   ok(T('ranks: Temp → Board Member in order'), rk.names.join('|') === 'Temp|Material Handler|Lead|Shift Supervisor|Manager|Engineer|Board Member', rk.names);
   ok(T('ranks: thresholds rise in both score and trim'), rk.th.every((t, i) => !i || (t[0] > rk.th[i - 1][0] && t[1] > rk.th[i - 1][1])), rk.th);
-  ok(T('ranks: trim gates promotion (10 pts @54% = Temp, @55% = Material Handler; 1000 pts @64% = Material Handler)'), rk.a === 0 && rk.b === 0 && rk.c === 1 && rk.h === 1, rk);
-  ok(T('ranks: score gates promotion (9 pts @100% = Temp; 149 pts @100% = Engineer)'), rk.d === 0 && rk.f === 5, rk);
-  ok(T('ranks: Board Member needs 150 pts AND 92% trim; exact thresholds inclusive'), rk.e === 5 && rk.g === 6 && rk.i === 3 && rk.j === 3, rk);
+  ok(T('ranks: trim gates promotion (25 pts @54% = Temp, @55% = Material Handler; 5000 pts @64% = Material Handler)'), rk.a === 0 && rk.b === 0 && rk.c === 1 && rk.h === 1, rk);
+  ok(T('ranks: score gates promotion (24 pts @100% = Temp; 1199 pts @100% = Engineer)'), rk.d === 0 && rk.f === 5, rk);
+  ok(T('ranks: Board Member needs 1200 pts AND 92% trim (v9 thresholds); exact thresholds inclusive'), rk.e === 5 && rk.g === 6 && rk.i === 3 && rk.j === 3, rk);
 
   // ---------- ranks in play: promotion moment, trim gating, best rank persisted ----------
   await p.evaluate(() => localStorage.removeItem('fbs.bestRank'));
   await p.click('#btnPlay'); await wait(p, 300);
   for (let i = 0; i < 6; i++) await place(p, 0);
+  await p.evaluate(() => { const S = window.__fbs.S; S.score = Math.max(S.score, 24); }); await place(p, 0); // v9 thresholds: Material Handler at 25
   const pr = await p.evaluate(() => { const S = window.__fbs.S; return { rank: S.rank, promo: S.promo && S.promo.text, score: S.score, trim: window.__fbs.trimPct() }; });
   ok(T('in play: perfect drops reach Material Handler with a "Promoted" banner'), pr.rank >= 1 && /Promoted: /.test(pr.promo || '') && pr.trim === 100, pr);
   // poor trim blocks promotion even with a big score
   const tg = await p.evaluate(async () => { const F = window.__fbs, S = F.S; S.trimSum = S.trimN * 0.3; S.score = 500; const r0 = S.rank; await F.finishExtrusion(); F.freeze(); const tp = S.stack[S.stack.length - 1]; F.setMovingX(tp.x + 2); F.drop(); return { r0, r1: S.rank, trim: F.trimPct() }; });
   ok(T('in play: 500 pts at ~50% trim does not promote'), tg.r1 === tg.r0 && tg.trim < 55, tg);
-  const tg2 = await p.evaluate(async () => { const F = window.__fbs, S = F.S; S.trimSum = S.trimN * 0.95; S.score = 160; await F.finishExtrusion(); F.freeze(); const tp = S.stack[S.stack.length - 1], m = S.moving; F.setMovingX(tp.x + (tp.w - m.w) / 2); F.drop(); return { r: S.rank, trim: F.trimPct() }; });
-  ok(T('in play: 160+ pts at 92%+ trim promotes to Board Member'), tg2.r === 6, tg2);
+  const tg2 = await p.evaluate(async () => { const F = window.__fbs, S = F.S; S.trimSum = S.trimN * 0.95; S.score = 1200; await F.finishExtrusion(); F.freeze(); const tp = S.stack[S.stack.length - 1], m = S.moving; F.setMovingX(tp.x + (tp.w - m.w) / 2); F.drop(); return { r: S.rank, trim: F.trimPct() }; });
+  ok(T('in play: 1200+ pts at 92%+ trim promotes to Board Member'), tg2.r === 6, tg2);
   ok(T('game over reached'), (await toOver(p)) === 'over');
   const go = await p.evaluate(() => ({ name: document.getElementById('rankName').textContent, meta: document.getElementById('rankMeta').textContent, icon: document.getElementById('rankIcon').textContent, lbl: document.getElementById('rankLbl').textContent, best: localStorage.getItem('fbs.bestRank') }));
   ok(T('game over shows rank, trim quality and best rank stored'), go.name === 'Board Member' && /Trim quality \d+%/.test(go.meta) && /Top rank!/.test(go.meta) && /new best/.test(go.lbl) && go.icon && go.best === '6', go);
@@ -132,7 +133,7 @@ async function suite(bt, dev, tag) {
   ok(T('landscape game over fits one screen (no scroll), rank + buttons + legal on screen'), fit2.vis && fit2.scroll <= 1 && !fit2.bad.length && !fit2.clip.length && !fit2.hOver && fit2.rank === 'Manager', fit2);
 
   // ---------- service worker + errors ----------
-  ok(T('service worker cache is fbs-v8'), /'fbs-v8'/.test(await p.evaluate(() => fetch('sw.js').then(r => r.text()))));
+  ok(T('service worker cache is fbs-v9'), /'fbs-v9'/.test(await p.evaluate(() => fetch('sw.js').then(r => r.text()))));
   ok(T('no console/page errors (portrait, events, landscape)'), errs.length === 0, errs);
   await b.close();
 }

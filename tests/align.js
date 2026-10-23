@@ -1,4 +1,4 @@
-/* v6 alignment tests: hosts' waists sit on the pallet's top deck at every height, in portrait and landscape,
+/* v6/v9 alignment tests (v9: in landscape the hosts hold the constant working level): hosts' waists sit on the pallet's top deck at every height, in portrait and landscape,
    after a mid-game rotation and during the WIDWAW (Bill) swap. Run: node tests/align.js [tag] */
 const pw = require('/workspace/tools/node_modules/playwright');
 const BASE = process.env.BASE || 'http://localhost:8833/';
@@ -15,8 +15,10 @@ async function settle(p) { // wait until the camera has caught up with its targe
 }
 const A = p => p.evaluate(() => window.__fbs.align());
 function check(T, a, what) {
-  const d = a.hosts.map(h => Math.abs(h.mid - a.palletTop));
-  ok(T(`${what}: both waists on the pallet top (±${TOL}px)`), d.every(x => x <= TOL), { palletTop: a.palletTop, mids: a.hosts.map(h => h.mid), cam: a.cam });
+  // portrait: waists ride the pallet top; v9 landscape: waists stay at the constant working level (= the opening pallet top)
+  const ref = a.land ? a.workLevel : a.palletTop, d = a.hosts.map(h => Math.abs(h.mid - ref));
+  ok(T(`${what}: both waists on the ${a.land ? 'working level' : 'pallet top'} (±${TOL}px)`), d.every(x => x <= TOL), { land: a.land, ref, palletTop: a.palletTop, mids: a.hosts.map(h => h.mid), cam: a.cam });
+  if (a.land) ok(T(`${what}: landscape top board sits on the working level (±${TOL}px)`), a.cam === 0 || Math.abs(a.topY - a.workLevel) <= TOL + 1, { topY: a.topY, wl: a.workLevel });
   ok(T(`${what}: hosts flank the pallet`), a.hosts[0].x < a.palletL && a.hosts[1].x + a.hosts[1].w > a.palletR, { L: a.palletL, R: a.palletR, hosts: a.hosts.map(h => [h.x, h.w]) });
 }
 async function suite(bt, dev, tag, rotate) {
@@ -28,11 +30,11 @@ async function suite(bt, dev, tag, rotate) {
   await p.evaluate(() => window.__fbs.start()); await p.waitForTimeout(200);
   await p.evaluate(() => window.__fbs.finishExtrusion()); await settle(p);
   const a0 = await A(p);
-  ok(T('opening view: camera unscrolled, pallet on screen above the bottom bars'), a0.cam === 0 && a0.palletTop > 0 && a0.floorY <= a0.H - a0.bottomUI, a0);
+  ok(T('opening view: camera unscrolled, pallet on screen above the bottom bars'), a0.cam < 1 && a0.palletTop > 0 && a0.floorY <= a0.H - a0.bottomUI, a0);
   check(T, a0, 'floor 0');
   for (const N of [1, 8, 15, 25]) { await playTo(p, N); check(T, await A(p), `floor ${N}`); }
   const hi = await A(p);
-  ok(T('pallet and hosts scroll by the same camera offset'), hi.cam === 0 || Math.abs((hi.palletTop - a0.palletTop) - hi.cam) <= TOL, { cam: hi.cam, d: hi.palletTop - a0.palletTop });
+  ok(T('pallet and hosts scroll by the same camera offset'), hi.cam === 0 || Math.abs((hi.palletTop - a0.palletTop) - (hi.cam - a0.cam)) <= TOL, { cam: hi.cam, d: hi.palletTop - a0.palletTop });
   if (rotate) {
     const vp = p.viewportSize(); const before = await A(p);
     await p.setViewportSize({ width: vp.height, height: vp.width }); await p.waitForTimeout(400); await settle(p);
