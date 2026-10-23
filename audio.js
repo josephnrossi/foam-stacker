@@ -86,6 +86,12 @@
         osc(t + 0.47, { type: 'square', f: 600, to: 420, dur: 0.3, vol: 0.02, lp: 1500 });
       },
       billLeave(t) { osc(t, { type: 'square', f: 880, to: 90, dur: 0.6, vol: 0.07, lp: 2200 }); osc(t, { type: 'sawtooth', f: 440, to: 55, dur: 0.6, vol: 0.05, lp: 900 }); noise(t + 0.05, { dur: 0.3, vol: 0.06, type: 'bandpass', f: 900, to: 200 }); },
+      // ---- v10 Cadence (Jacob Churchill): a metronome count-in (tick-tock-tick-tock) resolving to a bright perfect-cadence chord
+      cadence(t) {
+        [0, 0.14, 0.28, 0.42].forEach((d, i) => { osc(t + d, { type: 'square', f: i % 2 ? 1320 : 1760, dur: 0.035, vol: 0.06, lp: 5000 }); noise(t + d, { dur: 0.02, vol: 0.05, type: 'highpass', f: 4000 }); });
+        [[55, 67, 71, 74], [60, 64, 67, 72]].forEach((ch, k) => ch.forEach(n => osc(t + 0.58 + k * 0.2, { type: k ? 'triangle' : 'square', f: N(n + 12), dur: k ? 0.6 : 0.16, vol: k ? 0.07 : 0.035, hold: k ? 0.15 : 0, lp: 4200 })));
+      },
+      cadSnap(t) { osc(t, { type: 'triangle', f: 1600, to: 2400, dur: 0.06, vol: 0.06 }); osc(t + 0.05, { type: 'sine', f: 2400, dur: 0.1, vol: 0.05 }); },
       // ---- v9
       horn(t) { for (const [d, n] of [[0, 0], [0.32, 0.05]]) { osc(t + d, { type: 'square', f: 233, dur: 0.26, vol: 0.07, hold: 0.18, lp: 1400 }); osc(t + d, { type: 'square', f: 294, dur: 0.26, vol: 0.06, hold: 0.18, lp: 1400 }); } },
       skid(t) { for (let k = 0; k < 3; k++) osc(t + k * 0.16, { type: 'square', f: 1050, dur: 0.08, vol: 0.05, lp: 3000 }); noise(t + 0.05, { dur: 0.5, vol: 0.06, type: 'lowpass', f: 600, to: 250, a: 0.05 }); },
@@ -107,7 +113,7 @@
         osc(t + 0.42, { type: 'sine', f: N(48), dur: 0.8, vol: 0.15, hold: 0.3 });
       },
     };
-    const DUCK = new Set(['perfect', 'widwaw', 'billLeave', 'over', 'newBest', 'adhereEarn', 'slice', 'cut', 'bonus', 'bom', 'rankUp', 'horn', 'skid', 'truckload']);
+    const DUCK = new Set(['perfect', 'widwaw', 'billLeave', 'cadence', 'over', 'newBest', 'adhereEarn', 'slice', 'cut', 'bonus', 'bom', 'rankUp', 'horn', 'skid', 'truckload']);
     function play(name, t, ...args) { if (!S[name]) return; S[name](t, ...args); if (DUCK.has(name)) duck(t); }
 
     // ---- rain loop (ambience)

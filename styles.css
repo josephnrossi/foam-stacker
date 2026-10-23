@@ -248,3 +248,13 @@ html.land #tdBanner .x2{font-size:11px}
   html:not(.land) #truckHud #truckRow:not([hidden]){display:flex}
   html:not(.land) #truckHud .skbar{width:26px;margin:0;flex:none}
 }
+
+/* v10 Cadence (Jacob Churchill) banner: same shape as WIDWAW, cool teal/violet */
+#cadBanner{position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);width:min(88vw,360px);text-align:center;font-size:14px;font-weight:700;line-height:1.3;color:#0f1024;background:linear-gradient(90deg,#8fe3ff,#b79bff);border:2px solid #eef6ff;border-radius:12px;padding:6px 10px 9px;box-shadow:0 6px 20px #0008;pointer-events:none!important;animation:billPop .35s cubic-bezier(.3,1.6,.5,1)}
+#cadBanner[hidden]{display:none}
+#cadBanner b{font-weight:900;letter-spacing:.04em}
+#cadBanner .x2{display:inline-block;margin-left:4px;background:#0f1024;color:#8fe3ff;border-radius:6px;padding:0 5px;font-size:12px}
+#cadBanner .bar{margin-top:5px;height:6px;border-radius:3px;background:#0f102455;overflow:hidden}
+#cadBanner .bar i{display:block;height:100%;width:100%;background:#0f1024;border-radius:3px}
+html.land #cadBanner{position:fixed;top:auto;transform:none;animation:none;left:calc(var(--sal) + 6px);bottom:calc(var(--sab) + 4px);width:calc(58% - var(--sal) - 10px);box-sizing:border-box;margin:0;z-index:6}
+html.land #hud:has(#cadBanner:not([hidden])) #spotTicker{visibility:hidden}

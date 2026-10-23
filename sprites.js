@@ -2,6 +2,9 @@
    Evan: short silver hair, fair/ruddy, light-blue short-sleeve polo, brown belt, dark jeans, brown shoes, sturdy build.
    Bill VanHorn (guest, from his labelled headshot on gilmanbrothers.com/contact-us/): short spiky dark-brown hair with a high hairline,
    broad round face, dark rectangular glasses, big toothy smile, light stubble, white polo with a tan button. Trousers/shoes not in the photo (neutral).
+   Jacob Churchill (guest, Cadence event; from his labelled headshot on gilmanbrothers.com/contact-us/): dark-brown hair swept up and back
+   with volume on top, fair/rosy skin, broad round face, brown mustache + chin goatee, no glasses, white button-down with a fine
+   blue-grey check. Trousers/shoes not in the photo (neutral).
    Cyrus: bald, fair, periwinkle long-sleeve button-up over a dark tee, black belt, charcoal trousers, black shoes, slim build. */
 (function () {
   const OUT = '#1a1c26';
@@ -56,6 +59,51 @@
     p(23, 20 + b, 3, 12, c.top2); p(6, 31 + b, 20, 1, c.top2);                              // shading
     if (!cheer) { p(3, 24 + b, 4, 1, c.top2); p(25, 24 + b, 4, 1, c.top2); }
     p(6, 32 + j, 20, 2, c.belt); p(15, 32 + j, 2, 2, c.buckle);
+    p(9, 35 + j, 1, 8, c.leg2); p(22, 35 + j, 1, 8, c.leg2);
+    p(8, 44 + j, 3, 1, c.shoe2); p(18, 44 + j, 3, 1, c.shoe2);
+  }
+  const JACOB = {
+    skin: '#f2b9a0', skin2: '#d99a80', cheek: '#ec9c88', hair: '#3b2a20', hair2: '#5c4130', hair3: '#7a5a42', brow: '#4a3326', eye: '#2b2a33', mouth: '#8f3f39',
+    beard: '#6e4630', beard2: '#8a5a3c',
+    top: '#f3f5f9', top2: '#cfd6e2', check: '#c2ccdc', collar: '#ffffff', btn: '#c9d0dc', belt: '#2a2420', buckle: '#c5c9d1', leg: '#454a58', leg2: '#353a46', shoe: '#2a1f1a', shoe2: '#4a3a30',
+  };
+  function jacobParts(f) {
+    const c = JACOB, cheer = f >= 2, up = f === 1 ? 1 : 0, j = f === 3 ? -2 : f === 2 ? -1 : 0, b = up + j, L = [];
+    const P = (x, y, w, h, col) => L.push([x, y, w, h, col]);
+    P(8, 34 + j, 7, 10, c.leg); P(17, 34 + j, 7, 10, c.leg); P(14, 34 + j, 4, 3, c.leg);   // trousers (neutral)
+    P(7, 44 + j, 8, 3, c.shoe); P(17, 44 + j, 8, 3, c.shoe);
+    P(7, 19 + b, 18, 14, c.top);                                                            // checked button-down (broad build)
+    if (!cheer) { P(4, 20 + b, 3, 11, c.top); P(25, 20 + b, 3, 11, c.top); P(4, 31 + b, 3, 2, c.skin); P(25, 31 + b, 3, 2, c.skin); }
+    else { const s = f === 3 ? 1 : 0; P(4 - s, 9 + b, 3, 11, c.top); P(25 + s, 9 + b, 3, 11, c.top); P(4 - s, 6 + b, 3, 3, c.skin); P(25 + s, 6 + b, 3, 3, c.skin); }
+    P(12, 17 + b, 8, 3, c.skin);                                                            // neck
+    P(9, 5 + b, 14, 13, c.skin); P(10, 18 + b, 12, 1, c.skin); P(8, 10 + b, 1, 4, c.skin); P(23, 10 + b, 1, 4, c.skin); // broad round face + ears
+    P(10, 0 + b, 12, 2, c.hair); P(9, 2 + b, 14, 4, c.hair); P(9, 6 + b, 1, 4, c.hair); P(22, 6 + b, 1, 4, c.hair); // hair swept up + back, full on top
+    return L;
+  }
+  function jacobDetail(x, f) {
+    const c = JACOB, cheer = f >= 2, up = f === 1 ? 1 : 0, j = f === 3 ? -2 : f === 2 ? -1 : 0, b = up + j;
+    const p = (X, Y, w = 1, h = 1, col) => { x.fillStyle = col; x.fillRect(X, Y, w, h); };
+    p(12, 0 + b, 6, 1, c.hair2); p(11, 1 + b, 4, 1, c.hair3); p(16, 1 + b, 4, 1, c.hair2); p(19, 2 + b, 3, 1, c.hair2); // swept-back strands
+    p(10, 3 + b, 2, 1, c.hair2); p(14, 3 + b, 1, 1, c.hair3);
+    p(11, 5 + b, 10, 1, c.hair); p(10, 5 + b, 1, 2, c.hair); p(21, 5 + b, 1, 2, c.hair);     // hairline
+    p(12, 6 + b, 3, 1, '#fbd5c4');                                                          // forehead shine
+    p(11, 9 + b, 4, 1, c.brow); p(17, 9 + b, 4, 1, c.brow);                                 // brows
+    if (f === 1) { p(12, 11 + b, 3, 1, c.eye); p(17, 11 + b, 3, 1, c.eye); }
+    else { p(12, 11 + b, 3, 1, c.eye); p(17, 11 + b, 3, 1, c.eye); p(12, 12 + b, 1, 1, c.skin2); p(19, 12 + b, 1, 1, c.skin2); } // smiling eyes
+    p(15, 11 + b, 2, 3, c.skin2); p(15, 13 + b, 2, 1, '#e8a891');                          // nose
+    p(10, 13 + b, 2, 2, c.cheek); p(20, 13 + b, 2, 2, c.cheek);                             // rosy full cheeks
+    p(12, 14 + b, 8, 1, c.beard); p(11, 15 + b, 1, 1, c.beard); p(20, 15 + b, 1, 1, c.beard); p(13, 14 + b, 6, 1, c.beard2); // mustache
+    if (cheer) { p(13, 15 + b, 6, 2, c.mouth); p(13, 15 + b, 6, 1, '#ffffff'); }
+    else { p(13, 15 + b, 6, 1, c.mouth); p(14, 15 + b, 4, 1, '#f6efe9'); }                  // grin
+    p(14, 17 + b, 4, 2, c.beard); p(15, 19 + b, 2, 1, c.beard); p(15, 17 + b, 2, 1, c.beard2); // chin goatee
+    p(10, 19 + b, 4, 2, c.collar); p(18, 19 + b, 4, 2, c.collar); p(11, 21 + b, 1, 1, c.btn); p(20, 21 + b, 1, 1, c.btn); // button-down collar
+    for (let yy = 22; yy < 33; yy += 2) p(7, yy + b, 18, 1, c.check);                       // fine check: horizontal lines
+    for (let xx = 9; xx < 25; xx += 4) p(xx, 21 + b, 1, 12, c.check);                       //   + vertical lines
+    p(15, 20 + b, 2, 12, c.top); p(16, 20 + b, 1, 12, c.top2); p(15, 24 + b, 1, 1, c.btn); p(15, 28 + b, 1, 1, c.btn); // placket + buttons
+    p(23, 20 + b, 2, 12, c.top2); p(7, 31 + b, 18, 1, c.top2);                             // shading
+    if (!cheer) { for (let yy = 22; yy < 31; yy += 2) { p(4, yy + b, 3, 1, c.check); p(25, yy + b, 3, 1, c.check); } p(4, 30 + b, 3, 1, c.collar); p(25, 30 + b, 3, 1, c.collar); }
+    else { for (let yy = 11; yy < 20; yy += 2) { const s = f === 3 ? 1 : 0; p(4 - s, yy + b, 3, 1, c.check); p(25 + s, yy + b, 3, 1, c.check); } }
+    p(7, 32 + j, 18, 2, c.belt); p(15, 32 + j, 2, 2, c.buckle);
     p(9, 35 + j, 1, 8, c.leg2); p(22, 35 + j, 1, 8, c.leg2);
     p(8, 44 + j, 3, 1, c.shoe2); p(18, 44 + j, 3, 1, c.shoe2);
   }
@@ -127,7 +175,7 @@
     p(12, 35 + j, 1, 9, c.leg2); p(19, 35 + j, 1, 9, c.leg2);                               // trouser creases
     p(10, 44 + j, 3, 1, c.shoe2); p(17, 44 + j, 3, 1, c.shoe2);                             // polished shine
   }
-  const DEF = { evan: [evanParts, evanDetail], cyrus: [cyrusParts, cyrusDetail], bill: [billParts, billDetail] };
+  const DEF = { evan: [evanParts, evanDetail], cyrus: [cyrusParts, cyrusDetail], bill: [billParts, billDetail], jacob: [jacobParts, jacobDetail] };
   const cache = {};
   function frameCanvas(host, frame) {
     const key = host.id + frame; if (cache[key]) return cache[key];
@@ -145,6 +193,7 @@
   const HATS = {
     evan: { knit: '#d23a3a', knit2: '#a82a2a', cuff: '#f2f2f2', cuff2: '#c9ccd3', pom: '#ffffff', x0: 9, x1: 23 },   // red beanie, white cuff
     cyrus: { knit: '#2f8f6a', knit2: '#226b50', cuff: '#f5c542', cuff2: '#c9a13a', pom: '#f5c542', x0: 10, x1: 22 }, // green beanie, gold cuff
+    jacob: { knit: '#e07a1f', knit2: '#b35f14', cuff: '#2a2f3e', cuff2: '#3d4458', pom: '#f2f2f2', x0: 9, x1: 23 },  // orange beanie, charcoal cuff
     bill: { knit: '#2f6fd6', knit2: '#2353a3', cuff: '#f2f2f2', cuff2: '#c9ccd3', pom: '#ffffff', x0: 9, x1: 23 },
   };
   const hatCache = {};

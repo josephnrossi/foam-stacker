@@ -133,7 +133,7 @@ async function suite(bt, dev, tag) {
   ok(T('landscape game over fits one screen (no scroll), rank + buttons + legal on screen'), fit2.vis && fit2.scroll <= 1 && !fit2.bad.length && !fit2.clip.length && !fit2.hOver && fit2.rank === 'Manager', fit2);
 
   // ---------- service worker + errors ----------
-  ok(T('service worker cache is fbs-v9'), /'fbs-v9'/.test(await p.evaluate(() => fetch('sw.js').then(r => r.text()))));
+  ok(T('service worker cache is fbs-v10'), /'fbs-v10'/.test(await p.evaluate(() => fetch('sw.js').then(r => r.text()))));
   ok(T('no console/page errors (portrait, events, landscape)'), errs.length === 0, errs);
   await b.close();
 }

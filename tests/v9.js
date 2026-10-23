@@ -1,5 +1,5 @@
 /* v9 tests: skids (T.SKID_MAX), truckloads every 12 skids (bonus multiplier 1 + 0.5n), truck HUD, Team Drivers (after the first
-   truckload, ×1.5 for 8 boards, never with Bill/BOM), bonus math, new rank thresholds, compact rank-up pill, sw fbs-v9, no errors.
+   truckload, ×1.5 for 8 boards, never with Bill/BOM), bonus math, new rank thresholds, compact rank-up pill, sw fbs-v10, no errors.
    Run: node tests/v9.js [iphone15|se|pixel7|galaxy]  (server on :8833) */
 const pw = require('/workspace/tools/node_modules/playwright');
 const BASE = process.env.BASE || 'http://localhost:8833/';
@@ -135,7 +135,7 @@ async function suite(bt, dev, tag) {
   const rk = await pz.evaluate(() => { const F = window.__fbs, R = F.rankFor; return { th: F.RANKS.map(r => [r.name, r.score, r.trim]), a: R(24, 100), b: R(25, 55), c: R(649, 100), d: R(650, 86), e: R(1199, 100), f: R(1200, 91), g: R(1200, 92) }; });
   ok(T('ranks: v9 thresholds (25/55, 75/65, 175/72, 350/80, 650/86, 1200/92)'), JSON.stringify(rk.th) === JSON.stringify([['Temp', 0, 0], ['Material Handler', 25, 55], ['Lead', 75, 65], ['Shift Supervisor', 175, 72], ['Manager', 350, 80], ['Engineer', 650, 86], ['Board Member', 1200, 92]]), rk.th);
   ok(T('ranks: boundaries inclusive, trim still gates (1200 @91% = Engineer)'), rk.a === 0 && rk.b === 1 && rk.c === 4 && rk.d === 5 && rk.e === 5 && rk.f === 5 && rk.g === 6, rk);
-  ok(T('service worker cache is fbs-v9'), /'fbs-v9'/.test(await pz.evaluate(() => fetch('sw.js').then(r => r.text()))));
+  ok(T('service worker cache is fbs-v10'), /'fbs-v10'/.test(await pz.evaluate(() => fetch('sw.js').then(r => r.text()))));
   ok(T('no console/page errors'), errs.length === 0, errs);
   await b.close();
 }

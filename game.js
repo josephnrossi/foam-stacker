@@ -27,6 +27,10 @@
     // Each truckload adds +0.5x to the bonus multiplier. Team Drivers (after the 1st truckload) boosts it 50% for 8 boards.
     SKID_MAX: 15, SKIDS_PER_TRUCK: 12, TRUCK_STEP: 0.5, SKID_BONUS: 10, TRUCK_BONUS: 50, SKID_SWAP: 1.0,
     TD_MIN: 25, TD_MAX: 45, TD_LEN: 8, TD_BOOST: 1.5,
+    // v10 Cadence: Jacob Churchill pops into Cyrus's spot; for ~10 s every drop snaps dead-on and scores as a Perfect.
+    // Same cadence of appearances as Bill (first one 30-55 s in, then 30-55 s after he leaves), never alongside Bill / Team
+    // Drivers / New BOM / a skid swap, and both guests keep an 8 s gap between visits.
+    CAD_MIN: 30, CAD_MAX: 55, CAD_MIN_FLOORS: 12, CAD_DUR: 10, GUEST_GAP: 8, CAD_SKID_ROOM: 3,
   };
   // v8 ranks: you're promoted when BOTH your score and your trim quality (average % of each board that stayed on the stack) clear the bar
   const RANKS = [
@@ -48,6 +52,7 @@
   const pick = a => a[Math.floor(rnd() * a.length)];
   // random weather + BOM events are off in the deterministic test runs (?nobill / ?noevents) unless ?events is given
   const EVENTS = qs.has('events') || !(qs.has('nobill') || qs.has('noevents'));
+  const NOCAD = qs.has('nobill') || qs.has('noevents') || qs.has('nocad'); // v10: Cadence is forced via a hook in the tests
   // skids: 15 boards in play; the deterministic test runs (?nobill/?noevents) keep one endless skid unless ?skidmax=N is given
   T.SKID_MAX = qs.has('skidmax') ? Math.max(2, +qs.get('skidmax') || 15) : EVENTS ? T.SKID_MAX : 1e6;
 
@@ -97,7 +102,7 @@
   const sfx = {
     drop: P('drop'), slice: P('slice'), fall: P('fall'), perfect: P('perfect'), grow: P('grow'), over: P('over'), newBest: P('newBest'),
     extrude: P('extrude'), cut: P('cut'), bonus: P('bonus'), adhereEarn: P('adhereEarn'), adhereFasten: P('adhereFasten'),
-    widwaw: P('widwaw'), billLeave: P('billLeave'), ui: P('ui'),
+    widwaw: P('widwaw'), billLeave: P('billLeave'), ui: P('ui'), cadence: P('cadence'), cadSnap: P('cadSnap'),
     horn: P('horn'), skid: P('skid'), truckload: P('truckload'),
     bom: P('bom'), rankUp: P('rankUp'), chip: P('chip'), heat: P('heat'), cold: P('cold'), snow: P('snow'),
   };
@@ -180,6 +185,8 @@
       trimSum: 0, trimN: 0, rank: 0, promo: null, popups: [], flashA: 0, chips: 0,
       // v9
       skids: 0, trucks: 0, boardsTotal: 0, skidOut: null, skidWait: 0, td: null, tdNext: Infinity, tdCount: 0, truckFx: null,
+      // v10
+      cad: null, cadCount: 0, cadSnaps: 0, cadNext: NOCAD ? Infinity : T.CAD_MIN + rnd() * (T.CAD_MAX - T.CAD_MIN), guestCool: 0,
     };
     spawn(); updateTruckHud();
   }
@@ -200,7 +207,7 @@
     if (bonus) w = Math.min(S.maxW, w + Math.round(12 * K()));
     // v8: Evan's extruder tweak ("New BOM ready")
     if (S.bom && S.bom.left <= 0) endBom();
-    if (!S.bom && !S.td && S.playT >= S.bomNext && S.floors >= T.BOM_MIN_FLOORS && !(S.bill && S.bill.on)) startBom();
+    if (!S.bom && !S.td && S.playT >= S.bomNext && S.floors >= T.BOM_MIN_FLOORS && !(S.bill && S.bill.on) && !S.cad) startBom();
     let bomF = 0;
     if (S.bom && !bonus) {
       bomF = rnd() < 0.5 ? T.BOM_LO + rnd() * 0.35 : T.BOM_HI - rnd() * 0.35; // never ~100%: the change is always visible
@@ -235,6 +242,9 @@
     if (S.heatNext) perfectPx *= 2;
     if (S.rain > 0 && !m.p.moistureResistant) perfectPx = 1 * k;
     S.heatNext = false;
+    // v10 Cadence: wherever it's dropped (even a clean miss), the board snaps dead-on over the one below and lands Perfect
+    let cadFrom = null;
+    if (S.cad && S.cad.on) { const tx = m.bom ? tp.x + (tp.w - m.w) / 2 : tp.x; cadFrom = m.x; m.x = tx; S.cadSnaps++; }
     const armed = S.adhereArmed;
     const r = m.bom ? computeDropBom(tp, m, { perfectPx, stick: armed, maxW: S.maxW })
       : computeDrop(tp, m, { perfectPx, stickPx: armed ? 1e9 : id === 'self-adhesive' ? 14 * k : 0, springBack: id === 'spring-back' ? 0.25 : 0, wrapPx: id === 'v-cut-wrap' ? 10 * k : 0 });
@@ -260,9 +270,10 @@
       if (id === 'permanent') grow(board, 8 * K());
       if (id === 'heat-bond') S.heatNext = true;
       burst(board, 22); sfx.perfect(S.combo); buzz(12);
+      if (cadFrom != null) { const off = cadFrom - r.x; if (Math.abs(off) > 1) S.flashes.push({ kind: 'cadGhost', b: board, off, w: m.w, t: 0.55 }); sfx.cadSnap(); }
       if (r.cuts && r.cuts.length) for (const c of r.cuts) sliced({ cut: c }, m, board); // a wide BOM board centred: trimmed evenly on both sides
       if (S.combo >= 5) S.flashA = Math.min(0.22, 0.08 + S.combo * 0.015); // screen flash on a long Perfect streak
-      host(0, 'cheer', 'Excellent', true); host(1, 'cheer', 'Good job', true); // every Perfect: both hosts cheer together
+      host(0, 'cheer', 'Excellent', true); host(1, 'cheer', S.cad && S.cad.on ? 'Cadence' : 'Good job', true); // v10: Jacob keeps calling the cadence // every Perfect: both hosts cheer together
       S.perfStreak++; if (S.perfStreak % ADHERE_EVERY === 0) S.earnNow = true;
     } else {
       S.perfStreak = 0;
@@ -287,7 +298,7 @@
     if (S.wx) { S.wx.left--; if (S.wx.left <= 0) endWeather(); }
     if (S.td) { S.td.left--; updateTdBar(); if (S.td.left <= 0) endTD(); }
     { const nr = rankFor(S.score, trimPct()); if (nr > S.rank) { S.rank = nr; promote(nr); } }
-    if (S.floors >= T.RAIN_EVERY && S.rain === 0 && !S.bill && !S.wx && Math.floor(S.floors / T.RAIN_EVERY) > (S.rainCount || 0)) { S.rainCount = Math.floor(S.floors / T.RAIN_EVERY); S.rain = T.RAIN_LEN; host(1, 'idle', 'Rain! ☔ Watch out'); }
+    if (S.floors >= T.RAIN_EVERY && S.rain === 0 && !S.bill && !S.cad && !S.wx && Math.floor(S.floors / T.RAIN_EVERY) > (S.rainCount || 0)) { S.rainCount = Math.floor(S.floors / T.RAIN_EVERY); S.rain = T.RAIN_LEN; host(1, 'idle', 'Rain! ☔ Watch out'); }
     const ms = Math.floor(S.floors / T.MILESTONE); if (ms > (S.msCount || 0)) { S.msCount = ms; S.bonusNext = true; host(ms % 2, 'cheer', 'Bonus board for you!'); sfx.bonus(); }
     if (!collection.has(m.p.id)) { collection.add(m.p.id); store.set(LS.coll, [...collection]); S.unlockedNow.push(m.p.id); toast('New card: ' + m.p.name); }
     if (S.earnNow) { S.earnNow = false; earnAdhere(); } // after the card toast so the ADHERE™ pop-up isn't overwritten
@@ -462,7 +473,7 @@
     return { x, wy, y: Math.round((land ? workLevel() : S ? sy(wy) : groundY() - wy) - G.hh / 2), w: G.hw, h: G.hh }; }
   function hostSlot() { const h = hostPos(1); return { x: h.x + h.w / 2, wy: h.wy }; }
   function startBill() {
-    if (!S || S.bill) return;
+    if (!S || S.bill || S.cad) return;
     S.bill = { t: 0, dur: T.BILL_DUR, on: true, phase: 'in', outT: 0 }; S.billCount++;
     const h = S.hostState[1]; h.anim = 'cheer'; h.t = 1.4; h.bubble = { text: 'WIDWAW', t: 2.4 };
     const sl = hostSlot(); S.poofs.push({ x: sl.x, wy: sl.wy, t: 0 });
@@ -475,17 +486,41 @@
   }
   function updateBill(dt) {
     const b = S.bill;
-    if (!b) { if (S.playT >= S.billNext && S.floors >= T.BILL_MIN_FLOORS && !(S.rain > 0) && !S.td && !S.skidWait) startBill(); return; }
+    if (!b) { if (S.playT >= S.billNext && S.playT >= S.guestCool && S.floors >= T.BILL_MIN_FLOORS && !(S.rain > 0) && !S.td && !S.cad && !S.bom && !S.skidWait) startBill(); return; }
     if (b.on) { b.t += dt; if (b.phase === 'in' && b.t >= T.POOF) b.phase = 'on'; updateBillBar(); if (b.t >= b.dur) endBill(); }
-    else { b.outT += dt; if (b.outT >= T.POOF) { S.bill = null; S.billNext = S.playT + T.BILL_MIN + rnd() * (T.BILL_MAX - T.BILL_MIN); } }
+    else { b.outT += dt; if (b.outT >= T.POOF) { S.bill = null; S.billNext = S.playT + T.BILL_MIN + rnd() * (T.BILL_MAX - T.BILL_MIN); S.guestCool = S.playT + T.GUEST_GAP; } }
   }
+  // ---------- v10 Cadence: Jacob Churchill event (same in/out choreography as Bill) ----------
+  function startCad() {
+    if (!S || S.cad || S.bill) return;
+    S.cad = { t: 0, dur: T.CAD_DUR, on: true, phase: 'in', outT: 0 }; S.cadCount++;
+    const h = S.hostState[1]; h.anim = 'cheer'; h.t = 1.4; h.bubble = { text: 'Cadence', t: 2.4 }; S.hostState[0].bubble = null;
+    const sl = hostSlot(); S.poofs.push({ x: sl.x, wy: sl.wy, t: 0, col: '#8fe3ff' });
+    $('cadBanner').hidden = false; updateCadBar(); sfx.cadence(); buzz([10, 30, 10]);
+  }
+  function endCad() {
+    if (!S || !S.cad || !S.cad.on) return;
+    S.cad.on = false; S.cad.phase = 'out'; S.cad.outT = 0; S.hostState[1].bubble = null; S.hostState[1].anim = 'idle';
+    const sl = hostSlot(); S.poofs.push({ x: sl.x, wy: sl.wy, t: 0, col: '#8fe3ff' }); $('cadBanner').hidden = true; sfx.billLeave();
+  }
+  function updateCad(dt) {
+    const c = S.cad;
+    if (!c) {
+      if (S.playT >= S.cadNext && S.playT >= S.guestCool && S.floors >= T.CAD_MIN_FLOORS && !S.bill && !(S.rain > 0) && !S.td && !S.bom && !S.skidWait
+        && (S.stack.length - 1) <= T.SKID_MAX - T.CAD_SKID_ROOM) startCad(); // never right before a skid swap
+      return;
+    }
+    if (c.on) { if (!S.skidWait) c.t += dt; if (c.phase === 'in' && c.t >= T.POOF) c.phase = 'on'; updateCadBar(); if (c.t >= c.dur) endCad(); } // the clock holds during a skid swap
+    else { c.outT += dt; if (c.outT >= T.POOF) { S.cad = null; S.cadNext = S.playT + T.CAD_MIN + rnd() * (T.CAD_MAX - T.CAD_MIN); S.guestCool = S.playT + T.GUEST_GAP; } }
+  }
+  function updateCadBar() { const c = S && S.cad; const el = $('cadBar'); if (el && c) el.style.width = (Math.max(0, 1 - c.t / c.dur) * 100).toFixed(1) + '%'; }
   function updateBillBar() { const b = S && S.bill; const el = $('billBar'); if (el && b) el.style.width = (Math.max(0, 1 - b.t / b.dur) * 100).toFixed(1) + '%'; }
   function drawPoofs() {
     for (const p of S.poofs) {
       const k = p.t / T.POOF, a = 1 - k, r = 10 + k * 34, py = sy(p.wy);
-      ctx.save(); ctx.globalAlpha = a * 0.9; ctx.fillStyle = '#e9edf5';
+      ctx.save(); ctx.globalAlpha = a * 0.9; ctx.fillStyle = p.col ? '#eaf8ff' : '#e9edf5';
       for (let i = 0; i < 7; i++) { const an = i / 7 * Math.PI * 2; ctx.beginPath(); ctx.arc(p.x + Math.cos(an) * r * 0.7, py + Math.sin(an) * r * 0.5, 9 + 8 * (1 - k), 0, Math.PI * 2); ctx.fill(); }
-      ctx.fillStyle = '#f5c542'; for (let i = 0; i < 6; i++) { const an = i / 6 * Math.PI * 2 + 0.4; ctx.fillRect(p.x + Math.cos(an) * r * 1.2, py + Math.sin(an) * r * 0.9, 3, 3); }
+      ctx.fillStyle = p.col || '#f5c542'; for (let i = 0; i < 6; i++) { const an = i / 6 * Math.PI * 2 + 0.4; ctx.fillRect(p.x + Math.cos(an) * r * 1.2, py + Math.sin(an) * r * 0.9, 3, 3); }
       ctx.restore();
     }
   }
@@ -509,13 +544,13 @@
     S.cam += (S.camT - S.cam) * Math.min(1, dt * 6);
     if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 30);
     for (const h of S.hostState) { if (h.anim === 'cheer') { h.t -= dt; if (h.t <= 0) h.anim = 'idle'; } if (h.bubble) { h.bubble.t -= dt; if (h.bubble.t <= 0) h.bubble = null; } }
-    if (S.mode === 'play') { S.playT += dt; updateBill(dt); }
+    if (S.mode === 'play') { S.playT += dt; updateBill(dt); updateCad(dt); }
     if (S.mode === 'play' || S.mode === 'dying' || S.mode === 'over') updateWeather(dt);
     if (S.skidOut) { S.skidOut.t += dt; if (S.skidOut.t > T.SKID_SWAP + 0.2) S.skidOut = null; }
     if (S.truckFx) { S.truckFx.t += dt; if (S.truckFx.t > 2.6) S.truckFx = null; }
     if (S.mode === 'play') {
       if (S.skidWait > 0) { S.skidWait -= dt; if (S.skidWait <= 0) { S.skidWait = 0; spawn(); } }
-      if (!S.td && S.trucks && S.playT >= S.tdNext && !S.bill && !S.bom && !S.skidWait) startTD();
+      if (!S.td && S.trucks && S.playT >= S.tdNext && !S.bill && !S.cad && !S.bom && !S.skidWait) startTD();
     }
     for (let i = S.popups.length - 1; i >= 0; i--) { const u = S.popups[i]; u.t += dt; if (u.t > u.life) S.popups.splice(i, 1); }
     if (S.promo) { S.promo.t += dt; if (S.promo.t > S.promo.life) S.promo = null; }
@@ -679,13 +714,13 @@
   function drawHosts(dt) {
     const G = geo(), hw = G.hw, hh = G.hh;
     CFG.HOSTS.forEach((h0, i) => {
-      const b = S && S.bill, guest = i === 1 && b && b.on && CFG.GUEST, h = guest || h0;
+      const b = S && (S.bill || S.cad), guest = i === 1 && b && b.on && (S.bill ? CFG.GUEST : CFG.GUEST2), h = guest || h0; // v10: Jacob (Cadence) uses the same slot + pop as Bill
       if (i === 1 && S) S.slot1 = h.id;
       const st = S ? S.hostState[i] : { anim: 'idle' };
       const fr = st.anim === 'cheer' ? SPR.FRAMES.cheer[Math.floor(performance.now() / 180) % 2] : SPR.FRAMES.idle[Math.floor((performance.now() / 600 + i * 0.5)) % 2];
       // hosts stand so their vertical midpoint lines up with the pallet's top deck in the opening view
       const hp = hostPos(i), x = hp.x, y = hp.y;
-      // pop-in bounce: Bill on arrival, Cyrus on return
+      // pop-in bounce: Bill / Jacob on arrival, Cyrus on return
       const popT = i === 1 && b ? (b.on ? b.t : b.outT) : -1, popY = popT >= 0 && popT < T.POOF + 0.25 ? -Math.round(Math.abs(Math.sin(Math.min(1, popT / (T.POOF + 0.25)) * Math.PI * 1.5)) * 16 * (1 - popT / (T.POOF + 0.25))) : 0;
       if (S) (S.hostRects || (S.hostRects = []))[i] = { x, y, w: hw, h: hh, ox: sceneX() };
       if (S) { const fy = Math.round(sy(0)), feet = y + hh + 2; if (fy > feet + 3) drawMezz(x - 6, feet, hw + 12, Math.min(fy, H + 10)); } // landscape: catwalk under the hosts
@@ -775,6 +810,8 @@
       const b = fl.b, yb = sy(b.y), a = Math.max(0, fl.t / 0.35);
       if (fl.kind === 'bom') { const ly = sy(top().y + top().t), r0 = (1 - fl.t / 0.6) * 46; ctx.strokeStyle = '#7cf0a5'; ctx.globalAlpha = Math.max(0, fl.t / 0.6); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(T.DIE_X - 6, ly - 10, 8 + r0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; continue; }
       if (fl.kind === 'cut') { ctx.fillStyle = '#fff3b0'; ctx.globalAlpha = Math.max(0, fl.t / 0.12); const ly = sy(top().y + top().t); ctx.beginPath(); ctx.arc(T.DIE_X + 2, ly - (S.moving ? S.moving.t : 9) / 2, 10, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; continue; }
+      if (fl.kind === 'cadGhost') { const k = fl.t / 0.55, gx = b.x + fl.off * k; ctx.save(); ctx.globalAlpha = Math.max(0, k) * 0.8; ctx.fillStyle = '#8fe3ff40'; ctx.fillRect(gx, yb - b.t - T.DEPTH_Y, fl.w + T.DEPTH_X, b.t + T.DEPTH_Y); ctx.setLineDash([5, 4]); ctx.strokeStyle = '#8fe3ff'; ctx.lineWidth = 2.5; ctx.strokeRect(gx, yb - b.t, fl.w, b.t); ctx.setLineDash([]);
+        ctx.fillStyle = '#8fe3ff'; const ay = yb - b.t / 2, ax = gx + (fl.off > 0 ? 0 : fl.w); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + (fl.off > 0 ? -10 : 10), ay - 6); ctx.lineTo(ax + (fl.off > 0 ? -10 : 10), ay + 6); ctx.fill(); ctx.restore(); continue; }
       if (fl.kind === 'slice') { ctx.fillStyle = fl.col; ctx.globalAlpha = a; ctx.fillRect(fl.x - 1.5, yb - b.t - T.DEPTH_Y - 6, 3, b.t + T.DEPTH_Y + 12); ctx.globalAlpha = 1; }
       if (fl.kind === 'ring' || fl.kind === 'grow') { ctx.strokeStyle = fl.kind === 'ring' ? '#f5c542' : '#7cf0a5'; ctx.globalAlpha = a; ctx.lineWidth = 2; const e = (1 - a) * 14; ctx.strokeRect(b.x - e, yb - b.t - T.DEPTH_Y - e, b.w + T.DEPTH_X + e * 2, b.t + T.DEPTH_Y + e * 2); ctx.globalAlpha = 1; }
     }
@@ -841,7 +878,7 @@
   }
   function promoY() { // portrait: under the HUD and under any Bill / Team Drivers banner; landscape: in place of the board-name pill (hidden meanwhile)
     if (LANDSCAPE()) { const r = $('nowBoard').getBoundingClientRect(); return r.height ? Math.round(r.top + (r.height - 24) / 2) : safeTop + 70; }
-    let b = 0; for (const id of ['hud', 'billBanner', 'tdBanner']) { const e = $(id); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.height) b = Math.max(b, r.bottom); }
+    let b = 0; for (const id of ['hud', 'billBanner', 'tdBanner', 'cadBanner']) { const e = $(id); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.height) b = Math.max(b, r.bottom); }
     return (b || safeTop + 120) + 6;
   }
 
@@ -932,10 +969,10 @@
   const screens = ['start', 'pause', 'over', 'coll', 'legal'];
   function show(id) { for (const s of screens) $(s).hidden = s !== id; $('hud').hidden = !(S && (S.mode === 'play' || S.mode === 'dying' || S.mode === 'pause') && (id == null || id === 'pause')); $('bottomBar').hidden = $('hud').hidden; if ($('hud').hidden) $('deckBlurb').hidden = true; layoutBottom(); }
   let collReturn = 'start';
-  function start() { ac(); AU.setFast(false); newGame(); $('score').textContent = '0'; $('best').textContent = 'Best ' + best(); show(null); $('rescue').hidden = true; $('billBanner').hidden = true; $('tdBanner').hidden = true; updateAdhere(); host(0, 'cheer', 'Let\u2019s stack!'); }
+  function start() { ac(); AU.setFast(false); newGame(); $('score').textContent = '0'; $('best').textContent = 'Best ' + best(); show(null); $('rescue').hidden = true; $('billBanner').hidden = true; $('tdBanner').hidden = true; $('cadBanner').hidden = true; updateAdhere(); host(0, 'cheer', 'Let\u2019s stack!'); }
   function pause() { if (!S || S.mode !== 'play') return; S.mode = 'pause'; show('pause'); }
   function resume() { if (!S || S.mode !== 'pause') return; S.mode = 'play'; last = performance.now(); show(null); }
-  function gameOver() { $('rescue').hidden = true; $('billBanner').hidden = true; $('tdBanner').hidden = true;
+  function gameOver() { $('rescue').hidden = true; $('billBanner').hidden = true; $('tdBanner').hidden = true; $('cadBanner').hidden = true;
     S.mode = 'over'; const b = best(), nb = S.score > b; if (nb) store.set(LS.best, S.score); if (nb && b > 0) sfx.newBest(); else sfx.over();
     $('finalScore').textContent = S.score;
     $('finalMeta').textContent = `${S.height} boards · ${S.skids} skid${S.skids === 1 ? '' : 's'}${S.trucks ? ' · ' + S.trucks + ' truckload' + (S.trucks > 1 ? 's' : '') : ''} · ${S.perfects} perfect${S.perfects === 1 ? '' : 's'} · best ${Math.max(b, S.score)}`;
@@ -1053,7 +1090,7 @@
   }
   // test hooks
   window.__fbs = {
-    computeDrop, computeDropBom, RANKS, rankFor, trimPct, startWeather, endWeather, startBom, endBom, promote: i => promote(i), completeSkid: () => completeSkid(), startTD: () => startTD(), endTD: () => endTD(), bonusMult, updateTruckHud, wxSpeed: () => wxSpeed(), T, geo, audio: AU, startBill, endBill, boost, updateBill, boards: BOARDS, toggleAdhere, earnAdhere: () => earnAdhere(), rescue, get S() { return S; }, start, drop, pause, resume, products: PRODUCTS,
+    computeDrop, computeDropBom, RANKS, rankFor, trimPct, startWeather, endWeather, startBom, endBom, promote: i => promote(i), completeSkid: () => completeSkid(), startTD: () => startTD(), endTD: () => endTD(), bonusMult, updateTruckHud, wxSpeed: () => wxSpeed(), T, geo, audio: AU, startBill, endBill, boost, updateBill, startCad, endCad, updateCad, boards: BOARDS, toggleAdhere, earnAdhere: () => earnAdhere(), rescue, get S() { return S; }, start, drop, pause, resume, products: PRODUCTS,
     setMovingX(x) { if (S && S.moving) S.moving.x = x; }, setProduct(id, gl) { if (S && S.moving) { const p = productById[id]; S.moving.p = p; S.moving.look = lookFor(p); const g = (gl && p.gauges.find(x => x.label === gl)) || p.gauges[0]; S.moving.gauge = g; S.moving.t = thickFor(g); S.lineName = p.name + ' · ' + g.label; S.moving.speed = speedFor(p); } },
     spot: { next: spotAdvance, render: spotRender, durationFor, get id() { return curP().id; }, get fact() { return curF() && curF().id; }, get shownAt() { return spot.shownAt; }, history: spot.history, bags: () => ({ p: pBag.st, f: fBag.st }) }, facts: FACTS, layoutBottom,
     finishExtrusion() { return new Promise(r => { const c = () => (!S || !S.moving || !S.moving.extrude) ? r() : requestAnimationFrame(c); c(); }); },

@@ -16,4 +16,8 @@ window.FBS_CONFIG = {
   GUEST: { id: 'bill', name: 'Bill VanHorn', short: 'Bill', title: 'Vice President of Commercial Strategy' },
   GUEST_SOURCE: 'https://gilmanbrothers.com/contact-us/',
   GUEST_PHOTO: 'https://gilmanbrothers.com/wp-content/uploads/2024/02/bill-vanhorn.jpg',
+  // v10 guest: pops into Cyrus's spot during the Cadence event. Drawn (pixel art, no photo embedded) from his labelled headshot on the Contact Us page.
+  GUEST2: { id: 'jacob', name: 'Jacob Churchill', short: 'Jacob', title: 'Client Development Manager' },
+  GUEST2_SOURCE: 'https://gilmanbrothers.com/contact-us/',
+  GUEST2_PHOTO: 'https://gilmanbrothers.com/wp-content/uploads/2026/07/Jacob-edited.png',
 };
