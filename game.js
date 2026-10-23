@@ -4,7 +4,7 @@
   const CFG = window.FBS_CONFIG, PRODUCTS = window.FBS_PRODUCTS, SPR = window.FBS_SPRITES;
   const $ = id => document.getElementById(id);
   const cv = $('game'); let ctx = cv.getContext('2d');
-  const LS = { best: 'fbs.best', mute: 'fbs.mute', music: 'fbs.music', coll: 'fbs.collection' };
+  const LS = { rank: 'fbs.bestRank', best: 'fbs.best', mute: 'fbs.mute', music: 'fbs.music', coll: 'fbs.collection' };
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
@@ -19,13 +19,30 @@
     BILL_MIN: 25, BILL_MAX: 45, BILL_MIN_FLOORS: 10, BILL_DUR: 11, BILL_BOOST: 1.4, BILL_SCORE: 2, POOF: 0.35,
     PALLET_T: 16, DIE_X: 60, 
     EXTRUDE_PUSH: 0.5, EXTRUDE_CUT: 0.2, // extrusion: push-out + cut = 0.70 s (readable)
+    // v8 weather: a random heat wave, cold snap or snow day every 18-34 s of play (from floor 5), lasting 7 boards
+    WX_MIN: 18, WX_MAX: 34, WX_MIN_FLOORS: 5, WX_LEN: 7, HEAT_DRIFT: 0.35, COLD_SPEED: 1.12, SNOW_SPEED: 1.06, CHIP_BELOW: 0.88,
+    // v8 "New BOM ready": Evan tweaks the extruder every 16-30 s (from floor 6); the next 5 boards come out at 50-85% or 115-150% of the width below
+    BOM_MIN: 16, BOM_MAX: 30, BOM_MIN_FLOORS: 6, BOM_LEN: 5, BOM_LO: 0.5, BOM_HI: 1.5,
   };
+  // v8 ranks: you're promoted when BOTH your score and your trim quality (average % of each board that stayed on the stack) clear the bar
+  const RANKS = [
+    { name: 'Temp', icon: '🪪', score: 0, trim: 0 },
+    { name: 'Material Handler', icon: '📦', score: 10, trim: 55 },
+    { name: 'Lead', icon: '🔧', score: 25, trim: 65 },
+    { name: 'Shift Supervisor', icon: '📋', score: 45, trim: 72 },
+    { name: 'Manager', icon: '💼', score: 70, trim: 80 },
+    { name: 'Engineer', icon: '📐', score: 100, trim: 86 },
+    { name: 'Board Member', icon: '🏛️', score: 150, trim: 92 },
+  ];
+  function rankFor(score, trim) { let r = 0; RANKS.forEach((k, i) => { if (score >= k.score && trim >= k.trim) r = i; }); return r; }
 
   // ---------- RNG (seedable for tests) ----------
   const qs = new URLSearchParams(location.search);
   let seed = qs.has('seed') ? (+qs.get('seed') >>> 0) || 1 : (Math.random() * 2 ** 32) >>> 0;
   function rnd() { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
   const pick = a => a[Math.floor(rnd() * a.length)];
+  // random weather + BOM events are off in the deterministic test runs (?nobill / ?noevents) unless ?events is given
+  const EVENTS = qs.has('events') || !(qs.has('nobill') || qs.has('noevents'));
 
   // ---------- pure drop math (exported for tests) ----------
   // prev/cur: {x,w}. o: {perfectPx, stickPx, springBack, wrapPx}
@@ -45,6 +62,27 @@
     return res;
   }
 
+  // v8: drop math for a resized "New BOM" board (width differs from the board below). Perfect = centred within the window:
+  // a narrower board lands whole, a wider one keeps its width (up to maxW). Otherwise every overhang is cut.
+  function computeDropBom(prev, cur, o = {}) {
+    const win = o.perfectPx == null ? T.PERFECT_PX : o.perfectPx;
+    const left = Math.max(cur.x, prev.x), right = Math.min(cur.x + cur.w, prev.x + prev.w), ov = right - left;
+    if (ov <= 0) return { hit: false, miss: true, x: cur.x, w: cur.w, cut: { x: cur.x, w: cur.w }, cuts: [], overhang: cur.w };
+    const cdx = (cur.x + cur.w / 2) - (prev.x + prev.w / 2), cuts = [];
+    if (Math.abs(cdx) <= win) {
+      if (cur.w <= prev.w) return { hit: true, perfect: true, x: prev.x + (prev.w - cur.w) / 2, w: cur.w, cut: null, cuts, overhang: 0, snapped: Math.abs(cdx) };
+      // a wider board dropped dead-centre is accounted for: it keeps its width (up to maxW, the excess is trimmed evenly)
+      const keep = Math.min(cur.w, o.maxW || prev.w), x = prev.x + prev.w / 2 - keep / 2, side = (cur.w - keep) / 2;
+      if (side > 0.5) cuts.push({ x: x - side, w: side }, { x: x + keep, w: side });
+      return { hit: true, perfect: true, x, w: keep, cut: cuts[0] || null, cuts, overhang: cur.w - keep, snapped: Math.abs(cdx) };
+    }
+    if (o.stick) return { hit: true, perfect: false, stuck: true, x: cur.x, w: cur.w, cut: null, cuts, overhang: cur.w - ov };
+    if (cur.x < prev.x) cuts.push({ x: cur.x, w: prev.x - cur.x });
+    if (cur.x + cur.w > prev.x + prev.w) cuts.push({ x: prev.x + prev.w, w: cur.x + cur.w - prev.x - prev.w });
+    return { hit: true, perfect: false, x: left, w: ov, cut: cuts[0] || null, cuts, overhang: cur.w - ov };
+  }
+  const overlapOf = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+
   // ---------- audio (synth engine in audio.js) ----------
   const AU = window.FBS_AUDIO; let muted = store.get(LS.mute, false), musicOn = store.get(LS.music, false);
   function ac() { return AU.unlock(); }
@@ -53,6 +91,7 @@
     drop: P('drop'), slice: P('slice'), fall: P('fall'), perfect: P('perfect'), grow: P('grow'), over: P('over'), newBest: P('newBest'),
     extrude: P('extrude'), cut: P('cut'), bonus: P('bonus'), adhereEarn: P('adhereEarn'), adhereFasten: P('adhereFasten'),
     widwaw: P('widwaw'), billLeave: P('billLeave'), ui: P('ui'),
+    bom: P('bom'), rankUp: P('rankUp'), chip: P('chip'), heat: P('heat'), cold: P('cold'), snow: P('snow'),
   };
   const buzz = ms => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
 
@@ -127,6 +166,10 @@
       heatNext: false, quickBond: 0, retryAvail: false, bonusNext: false,
       rain: 0, rainDrops: [], unlockedNow: [], hostState: [{ anim: 'idle', t: 0, bubble: null }, { anim: 'idle', t: 0, bubble: null }],
       moving: null, overT: 0, maxW: bw, seen: new Set(),
+      // v8
+      wx: null, wxA: 0, wxType: null, wxNext: EVENTS ? T.WX_MIN + rnd() * (T.WX_MAX - T.WX_MIN) : Infinity, wxCount: 0, flakes: [], shimmer: 0,
+      bom: null, bomNext: EVENTS ? T.BOM_MIN + rnd() * (T.BOM_MAX - T.BOM_MIN) : Infinity, bomCount: 0,
+      trimSum: 0, trimN: 0, rank: 0, promo: null, popups: [], flashA: 0, chips: 0,
     };
     spawn();
   }
@@ -145,10 +188,22 @@
     let w = tp.w;
     const bonus = S.bonusNext; S.bonusNext = false;
     if (bonus) w = Math.min(S.maxW, w + Math.round(12 * K()));
-    const gauge = pick(p.gauges), m = { p, gauge, look: lookFor(p), w, t: thickFor(gauge), dir: 1, bonus, retry: false };
+    // v8: Evan's extruder tweak ("New BOM ready")
+    if (S.bom && S.bom.left <= 0) endBom();
+    if (!S.bom && S.playT >= S.bomNext && S.floors >= T.BOM_MIN_FLOORS && !(S.bill && S.bill.on)) startBom();
+    let bomF = 0;
+    if (S.bom && !bonus) {
+      bomF = rnd() < 0.5 ? T.BOM_LO + rnd() * 0.35 : T.BOM_HI - rnd() * 0.35; // never ~100%: the change is always visible
+      if (S.bom.force) { bomF = S.bom.force; S.bom.force = 0; }
+      const minW = Math.min(tp.w, Math.round(26 * K())), maxW = Math.round(Math.min(sceneW() - T.DIE_X - 12, S.maxW * 1.5));
+      w = Math.max(minW, Math.min(maxW, Math.round(S.bom.spec * bomF))); bomF = w / tp.w; S.bom.left--; // ±50% of the spec width (no compounding)
+    } else if (S.bomSpec && !bonus) { // "Back to spec": one board at the pre-BOM width; drop it dead-centre to win the width back
+      w = Math.max(Math.round(26 * K()), Math.min(S.maxW, Math.round(S.bomSpec))); S.bomSpec = 0; if (Math.abs(w / tp.w - 1) > 0.04) bomF = w / tp.w;
+    }
+    const gauge = pick(p.gauges), m = { p, gauge, look: lookFor(p), w, t: thickFor(gauge), dir: 1, bonus, retry: false, bom: bomF || 0 };
     m.y = tp.y + tp.t; m.speed = speedFor(p);
     m.extrude = { t: 0, start: performance.now(), cut: false }; m.x = T.DIE_X - w; // still inside the die
-    S.moving = m; S.lineName = p.name + ' · ' + gauge.label; S.lineFlash = 0.6;
+    S.moving = m; S.lineName = p.name + ' · ' + gauge.label + (bomF ? ' · W ' + Math.round(bomF * 100) + '%' : ''); S.lineFlash = 0.6;
     if (S.quickBond > 0) S.quickBond--;
     updateNowBoard(); sfx.extrude((T.EXTRUDE_PUSH + T.EXTRUDE_CUT) / boost());
   }
@@ -156,6 +211,9 @@
     const m = S && S.moving; const el = $('nowBoard');
     if (!m) { el.textContent = ''; return; }
     el.innerHTML = '';
+    const W8 = { heat: '☀️ Heat', cold: '🥶 Cold', snow: '❄️ Snow' };
+    if (S.wx) { const c = document.createElement('span'); c.className = 'wxchip ' + S.wx.type; c.textContent = W8[S.wx.type] + ' ' + S.wx.left; el.append(c); } // weather indicator (boards left)
+    if (m.bom) { const c = document.createElement('span'); c.className = 'wxchip bom'; c.textContent = '📋 ' + Math.round(m.bom * 100) + '%'; el.append(c); }
     const b = document.createElement('b'); b.textContent = m.p.trait.name; el.append(b, document.createTextNode((m.bonus ? ' · Bonus!' : '') + (S.rain > 0 ? ' · ☔ Rain' : '')));
   }
 
@@ -168,7 +226,8 @@
     if (S.rain > 0 && !m.p.moistureResistant) perfectPx = 1 * k;
     S.heatNext = false;
     const armed = S.adhereArmed;
-    const r = computeDrop(tp, m, { perfectPx, stickPx: armed ? 1e9 : id === 'self-adhesive' ? 14 * k : 0, springBack: id === 'spring-back' ? 0.25 : 0, wrapPx: id === 'v-cut-wrap' ? 10 * k : 0 });
+    const r = m.bom ? computeDropBom(tp, m, { perfectPx, stick: armed, maxW: S.maxW })
+      : computeDrop(tp, m, { perfectPx, stickPx: armed ? 1e9 : id === 'self-adhesive' ? 14 * k : 0, springBack: id === 'spring-back' ? 0.25 : 0, wrapPx: id === 'v-cut-wrap' ? 10 * k : 0 });
     if (r.miss) {
       if (id === 'impact' && !m.retry) { // bounce back once
         m.retry = true; m.dir = 1; m.x = T.DIE_X; host(0, 'cheer', 'One more try!'); sfx.grow(); buzz(15); return;
@@ -180,6 +239,8 @@
     // land
     const usedAdhere = armed && !r.perfect;
     const board = { adhered: usedAdhere ? { l: Math.max(r.x, tp.x), r: Math.min(r.x + r.w, tp.x + tp.w) } : null, x: r.x, w: r.w, y: tp.y + tp.t, t: m.t, gauge: m.gauge, p: m.p, look: m.look, landT: 0, extruded: m.extruded };
+    // v8 trim quality: share of the board that could stay on (overlap vs. the narrower of the two) – 100% for a Perfect
+    const q = r.perfect ? 1 : Math.min(1, overlapOf(m, tp) / Math.max(1, Math.min(m.w, tp.w))); S.trimSum += q; S.trimN++; board.q = q;
     S.stack.push(board); sfx.drop(m.gauge ? m.gauge.inches : 0.1875, S.stack.length === 2); // foam thunk (lower for thicker), wood knock on the pallet
     let pts = id === 'heavy-duty' ? 2 : 1, floorsAdd = pts;
     if (r.perfect) {
@@ -189,13 +250,15 @@
       if (id === 'permanent') grow(board, 8 * K());
       if (id === 'heat-bond') S.heatNext = true;
       burst(board, 22); sfx.perfect(S.combo); buzz(12);
+      if (r.cuts && r.cuts.length) for (const c of r.cuts) sliced({ cut: c }, m, board); // a wide BOM board centred: trimmed evenly on both sides
+      if (S.combo >= 5) S.flashA = Math.min(0.22, 0.08 + S.combo * 0.015); // screen flash on a long Perfect streak
       host(0, 'cheer', 'Excellent', true); host(1, 'cheer', 'Good job', true); // every Perfect: both hosts cheer together
       S.perfStreak++; if (S.perfStreak % ADHERE_EVERY === 0) S.earnNow = true;
     } else {
       S.perfStreak = 0;
       if (usedAdhere) { S.adhereArmed = false; S.adhere--; updateAdhere(); sfx.adhereFasten(); }
       if (r.stuck) { flash(board.x + (r.x > tp.x ? board.w : 0), board, '#7cf0a5'); }
-      else { sliced(r, m, board); }
+      else { if (r.cuts) { for (const c of r.cuts) sliced({ cut: c }, m, board); if (!r.cuts.length) sfx.slice(); } else sliced(r, m, board); if (S.wx && S.wx.type === 'cold' && q < T.CHIP_BELOW && !r.perfect) chip(board, r, m); }
       if (r.wrapped) { S.combo++; host(1, 'cheer', 'Wrapped!'); }
       else if (id !== 'clean-cut' && !usedAdhere) S.combo = 0; // ADHERE™ is damage-free: combo kept
       buzz(8);
@@ -208,8 +271,11 @@
     if (id === 'rain-shield' && S.rain > 0) pts *= 2;
     if (S.bill && S.bill.on) pts *= T.BILL_SCORE; // WIDWAW: every board is worth 2x (multiplies trait bonuses)
     S.lastPts = pts; S.score += pts; S.floors += floorsAdd; S.height = S.stack.length - 1;
+    popup('+' + pts, board, r.perfect ? '#f5c542' : '#e9edf5'); dust(board);
     if (S.rain > 0) S.rain--;
-    if (S.floors >= T.RAIN_EVERY && S.rain === 0 && !S.bill && Math.floor(S.floors / T.RAIN_EVERY) > (S.rainCount || 0)) { S.rainCount = Math.floor(S.floors / T.RAIN_EVERY); S.rain = T.RAIN_LEN; host(1, 'idle', 'Rain! ☔ Watch out'); }
+    if (S.wx) { S.wx.left--; if (S.wx.left <= 0) endWeather(); }
+    { const nr = rankFor(S.score, trimPct()); if (nr > S.rank) { S.rank = nr; promote(nr); } }
+    if (S.floors >= T.RAIN_EVERY && S.rain === 0 && !S.bill && !S.wx && Math.floor(S.floors / T.RAIN_EVERY) > (S.rainCount || 0)) { S.rainCount = Math.floor(S.floors / T.RAIN_EVERY); S.rain = T.RAIN_LEN; host(1, 'idle', 'Rain! ☔ Watch out'); }
     const ms = Math.floor(S.floors / T.MILESTONE); if (ms > (S.msCount || 0)) { S.msCount = ms; S.bonusNext = true; host(ms % 2, 'cheer', 'Bonus board for you!'); sfx.bonus(); }
     if (!collection.has(m.p.id)) { collection.add(m.p.id); store.set(LS.coll, [...collection]); S.unlockedNow.push(m.p.id); toast('New card: ' + m.p.name); }
     if (S.earnNow) { S.earnNow = false; earnAdhere(); } // after the card toast so the ADHERE™ pop-up isn't overwritten
@@ -238,7 +304,7 @@
   function sliced(r, m, board) {
     if (r.cut && r.cut.w > 0.5) {
       const pc = mkPiece(r.cut.x, r.cut.w, m, board.y); pc.vx = (r.cut.x > board.x ? 1 : -1) * (60 + rnd() * 80); pc.vr = (r.cut.x > board.x ? 1 : -1) * (2 + rnd() * 3);
-      S.falling.push(pc); flash(r.cut.x > board.x ? r.cut.x : r.cut.x + r.cut.w, board, '#ffffff');
+      S.falling.push(pc); const ex = r.cut.x > board.x ? r.cut.x : r.cut.x + r.cut.w; flash(ex, board, '#ffffff'); crumbs(ex, board, m.look);
     }
     sfx.slice();
   }
@@ -254,6 +320,53 @@
     for (let i = 0; i < 14; i++) { const a = -Math.PI / 2 + (rnd() - 0.5) * 2.4, sp = 120 + rnd() * 260; S.parts.push({ x, y, vx: Math.cos(a) * sp * 0.6, vy: -Math.sin(a) * sp, life: 0.25 + rnd() * 0.25, t: 0, col: pick(['#fff3b0', '#ffd75e', '#ff9d3a', '#ffffff']) }); }
     S.flashes.push({ kind: 'cut', t: 0.12, b: top() });
   }
+  // ---------- v8 effects ----------
+  function popup(text, board, col) { S.popups.push({ text, x: board.x + board.w / 2, wy: board.y + board.t + 6, t: 0, life: 0.9, col }); }
+  function dust(board) { // soft puffs at both ends of a landed board
+    for (const ex of [board.x, board.x + board.w]) for (let i = 0; i < 4; i++) S.parts.push({ x: ex + (rnd() - 0.5) * 6, y: board.y + board.t * 0.3, vx: (ex === board.x ? -1 : 1) * (20 + rnd() * 50), vy: 20 + rnd() * 40, life: 0.35 + rnd() * 0.2, t: 0, col: '#c9d0de', g: 0.2, sz: 3 });
+  }
+  function crumbs(x, board, look) { // foam crumbs from a trimmed edge
+    for (let i = 0; i < 7; i++) S.parts.push({ x, y: board.y + rnd() * board.t, vx: (rnd() - 0.5) * 160, vy: rnd() * 120, life: 0.45 + rnd() * 0.3, t: 0, col: i % 2 ? look.core : look.face, sz: 2 + (i % 2) });
+  }
+  function chip(board, r, m) { // v8 cold: brittle board – a sloppy trim chips a little extra off the cut edge
+    const amt = Math.min(Math.round(3 * K()), Math.max(0, board.w * 0.05)); if (amt < 1 || board.w - amt < 8) return;
+    const rightSide = (r.cuts && r.cuts.length ? r.cuts[0].x : r.cut ? r.cut.x : 0) > board.x;
+    const cx = rightSide ? board.x + board.w - amt : board.x; board.w -= amt; if (!rightSide) board.x += amt;
+    S.falling.push(mkPiece(cx, amt, m, board.y)); S.chips++;
+    for (let i = 0; i < 10; i++) S.parts.push({ x: cx + amt / 2, y: board.y + board.t / 2, vx: (rightSide ? 1 : -1) * (60 + rnd() * 160), vy: 40 + rnd() * 160, life: 0.5 + rnd() * 0.3, t: 0, col: pick(['#dff3ff', '#a9d8ff', '#ffffff']), sz: 2 });
+    S.popups.push({ text: 'Chipped! 🥶', x: cx + amt / 2, wy: board.y + board.t + 22, t: 0, life: 1.1, col: '#a9d8ff' }); sfx.chip(); buzz([6, 20, 6]);
+  }
+  const trimPct = () => (S && S.trimN ? Math.round(S.trimSum / S.trimN * 100) : 100);
+  function promote(i) {
+    const k = RANKS[i]; S.promo = { text: 'Promoted: ' + k.name, icon: k.icon, t: 0, life: 2.2 };
+    for (let n = 0; n < 44; n++) S.parts.push({ x: rnd() * sceneW(), y: S.cam + groundY() - rnd() * H * 0.25, vx: (rnd() - 0.5) * 90, vy: 20 + rnd() * 60, life: 1.6 + rnd() * 0.6, t: 0, col: pick(['#f5c542', '#7cf0a5', '#8fb8ff', '#ff8fa3', '#ffffff']), sz: 4, g: 0.12, conf: true, rot: rnd() * 6 }); // confetti
+    sfx.rankUp(); buzz([10, 30, 10]);
+  }
+  // ---------- v8 weather ----------
+  const WX_SAY = { heat: [1, 'Heat wave! Boards go soft'], cold: [1, 'Cold snap! Boards get brittle'], snow: [0, 'Snow day! Hats on'] };
+  const WX_TOAST = { heat: 'Heat wave: soft, warm boards wobble and drift', cold: 'Cold snap: stiff boards slide faster; sloppy trims chip', snow: 'Snow: slick boards slide a little faster' };
+  function startWeather(type) {
+    if (!S || S.wx) return; if (!type) { const opts = ['heat', 'cold', 'snow'].filter(t => t !== S.wxLast); type = pick(opts); } S.wxLast = type; // never the same weather twice in a row
+    S.wx = { type, left: T.WX_LEN, t: 0 }; S.wxType = type; S.wxCount++;
+    const [hi, say] = WX_SAY[type]; host(hi, 'cheer', say); toast(WX_TOAST[type], { heat: '☀️ ', cold: '🥶 ', snow: '❄️ ' }[type]); sfx[type](); updateNowBoard();
+  }
+  function endWeather() { if (!S || !S.wx) return; S.wx = null; S.wxNext = S.playT + T.WX_MIN + rnd() * (T.WX_MAX - T.WX_MIN); updateNowBoard(); }
+  function updateWeather(dt) {
+    if (!S.wx && S.playT >= S.wxNext && S.floors >= T.WX_MIN_FLOORS && !(S.rain > 0)) startWeather();
+    S.wxA += ((S.wx ? 1 : 0) - S.wxA) * Math.min(1, dt * 2.5); if (!S.wx && S.wxA < 0.01) { S.wxA = 0; S.wxType = null; }
+    if (S.wx) S.wx.t += dt;
+    const ty = S.wxType;
+    if ((ty === 'snow' || ty === 'cold') && S.wxA > 0.05) { const n = ty === 'snow' ? 1.2 : 0.25; if (rnd() < n * S.wxA * dt * 60 / 2) S.flakes.push({ x: rnd() * (W + 40) - sceneX() - 20, y: -8, v: 40 + rnd() * 50, r: 1 + rnd() * 2.2, ph: rnd() * 6 }); }
+    for (let i = S.flakes.length - 1; i >= 0; i--) { const f = S.flakes[i]; f.y += f.v * dt; f.x += Math.sin(S.t * 1.5 + f.ph) * 18 * dt - 8 * dt; if (f.y > H + 6 || S.flakes.length > 160) S.flakes.splice(i, 1); }
+  }
+  // ---------- v8 "New BOM ready" ----------
+  function startBom(force) {
+    if (!S || S.bom) return; S.bom = { left: T.BOM_LEN, force: force || 0, spec: top().w }; S.bomCount++;
+    host(0, 'cheer', 'New BOM ready'); toast('Evan tweaked the extruder: board widths now vary ±50%', '📋 '); sfx.bom(); buzz([8, 30, 8]);
+    S.flashes.push({ kind: 'bom', t: 0.6, b: top() });
+  }
+  function endBom() { if (!S || !S.bom) return; S.bomSpec = S.bom.spec; S.bom = null; S.bomNext = S.playT + T.BOM_MIN + rnd() * (T.BOM_MAX - T.BOM_MIN); host(0, 'idle', 'Back to spec'); }
+
   function host(i, anim, text, both) {
     if (!S) return; const h = S.hostState[i]; h.anim = anim; h.t = anim === 'cheer' ? 1.0 : 0; if (text) { h.bubble = { text, t: 1.5 }; if (!both) S.hostState[1 - i].bubble = null; }
   }
@@ -317,6 +430,11 @@
     }
   }
 
+  function wxSpeed() { // v8 weather on the slide speed (heat: a soft, uneven drift; cold/snow: stiff/slick, a bit faster)
+    const ty = S.wx && S.wx.type; if (!ty) return 1;
+    if (ty === 'heat') return 1 + T.HEAT_DRIFT * Math.sin(S.t * 4.2) * Math.min(1, S.wxA * 1.5);
+    return ty === 'cold' ? T.COLD_SPEED : T.SNOW_SPEED;
+  }
   // ---------- toast ----------
   function toast(msg, icon) { // shown in the HUD pill so nothing stacks over the play area
     const el = $('deckBlurb'); el.textContent = (icon || '🃏 ') + msg; el.hidden = false; el.style.opacity = 1; clearTimeout(deckTimer);
@@ -332,6 +450,10 @@
     if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 30);
     for (const h of S.hostState) { if (h.anim === 'cheer') { h.t -= dt; if (h.t <= 0) h.anim = 'idle'; } if (h.bubble) { h.bubble.t -= dt; if (h.bubble.t <= 0) h.bubble = null; } }
     if (S.mode === 'play') { S.playT += dt; updateBill(dt); }
+    if (S.mode === 'play' || S.mode === 'dying' || S.mode === 'over') updateWeather(dt);
+    for (let i = S.popups.length - 1; i >= 0; i--) { const u = S.popups[i]; u.t += dt; if (u.t > u.life) S.popups.splice(i, 1); }
+    if (S.promo) { S.promo.t += dt; if (S.promo.t > S.promo.life) S.promo = null; }
+    if (S.flashA > 0) S.flashA = Math.max(0, S.flashA - dt * 0.6);
     for (let i = S.poofs.length - 1; i >= 0; i--) { S.poofs[i].t += dt; if (S.poofs[i].t > T.POOF) S.poofs.splice(i, 1); }
     if (S.mode === 'play' && S.moving) {
       const m = S.moving;
@@ -340,14 +462,15 @@
         const k = Math.min(1, e.t / P); m.x = T.DIE_X - m.w + m.w * (1 - Math.pow(1 - k, 2));
         if (e.t >= P && !e.cut) { e.cut = true; e.cutAt = e.t; sparks(T.DIE_X + 2, m.y + m.t / 2); sfx.cut(); buzz(6); }
         if (e.t >= P + T.EXTRUDE_CUT) { m.x = T.DIE_X; m.extrude = null; m.extruded = true; S.extrudeLog.push({ ms: performance.now() - e.start, sim: e.t, id: m.p.id }); }
-      } else if (m.speed > 0) { m.x += m.dir * m.speed * boost() * dt;
+      } else if (m.speed > 0) { m.x += m.dir * m.speed * boost() * wxSpeed() * dt;
       const minX = T.DIE_X, maxX = sceneW() - m.w * 0.65;
       if (m.x > maxX) { m.x = maxX - (m.x - maxX); m.dir = -1; } else if (m.x < minX) { m.x = minX + (minX - m.x); m.dir = 1; } }
     }
     if (S.lineFlash > 0) S.lineFlash -= dt;
     for (const b of S.stack) if (b.landT != null && b.landT < 1) b.landT += dt * 6;
     for (let i = S.falling.length - 1; i >= 0; i--) { const f = S.falling[i]; f.vy -= 1500 * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.rot += f.vr * dt; if (f.y < S.cam - H) S.falling.splice(i, 1); }
-    for (let i = S.parts.length - 1; i >= 0; i--) { const p = S.parts[i]; p.t += dt; p.vy -= 600 * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.t > p.life) S.parts.splice(i, 1); }
+    if (S.parts.length > 420) S.parts.splice(0, S.parts.length - 420); // cap for older phones
+    for (let i = S.parts.length - 1; i >= 0; i--) { const p = S.parts[i]; p.t += dt; p.vy -= 600 * (p.g == null ? 1 : p.g) * dt; if (p.conf) p.rot += dt * 6; p.x += p.vx * dt; p.y += p.vy * dt; if (p.t > p.life) S.parts.splice(i, 1); }
     for (let i = S.flashes.length - 1; i >= 0; i--) { S.flashes[i].t -= dt; if (S.flashes[i].t <= 0) S.flashes.splice(i, 1); }
     if (S.rain > 0 || S.rainDrops.length) {
       if (S.rain > 0) for (let i = 0; i < 4; i++) S.rainDrops.push({ x: rnd() * W - sceneX(), y: -10, v: 600 + rnd() * 300 });
@@ -392,6 +515,17 @@
     ctx.fillStyle = '#00000030'; ctx.fillRect(x, yb - 1, w, 1);
     if (opts.bonus) { ctx.strokeStyle = '#f5c542'; ctx.lineWidth = 2; ctx.strokeRect(x - 1, yt - 1, w + 2, t + 2); }
   }
+  // v8 heat: draw a board softened/sagging – vertical strips offset by a droop curve (ends dip, a slow warp wave)
+  function drawBoardSag(x, yb, w, t, look, p, opts, sag) {
+    if (!sag || w < 24) return drawBoard(x, yb, w, t, look, p, opts);
+    const n = 14, sw = w / n;
+    for (let i = 0; i < n; i++) {
+      const u = (i + 0.5) / n, dy = sag * ((2 * u - 1) ** 2) + sag * 0.25 * Math.sin(u * Math.PI * 2 + S.t * 3);
+      ctx.save(); ctx.beginPath(); ctx.rect(x + i * sw - (i ? 0 : 2), -1e4, sw + (i === n - 1 ? T.DEPTH_X + 4 : 0.75) + (i ? 0 : 2), 3e4); ctx.clip();
+      ctx.translate(0, dy); drawBoard(x, yb, w, t, look, p, opts); ctx.restore();
+    }
+  }
+  function topFace(x, yt, w, col) { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, yt); ctx.lineTo(x + w, yt); ctx.lineTo(x + w + T.DEPTH_X, yt - T.DEPTH_Y); ctx.lineTo(x + T.DEPTH_X, yt - T.DEPTH_Y); ctx.closePath(); ctx.fill(); }
   function drawTabs(b, yb) { // little ADHERE™ fastener tabs across the held joint
     for (const jx of [b.adhered.l, b.adhered.r]) {
       if (jx <= b.x + 1 || jx >= b.x + b.w - 1) continue;
@@ -490,7 +624,10 @@
       if (S) (S.hostRects || (S.hostRects = []))[i] = { x, y, w: hw, h: hh, ox: sceneX() };
       ctx.fillStyle = '#00000066'; ctx.beginPath(); ctx.ellipse(x + hw / 2, y + hh + 1, hw * 0.45, 3, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#2a2f3e'; ctx.fillRect(x - 4, y + hh + 2, hw + 8, 2);
-      ctx.imageSmoothingEnabled = false; ctx.drawImage(SPR.frameCanvas(h, fr), Math.round(x), Math.round(y + popY), hw, hh); ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingEnabled = false; ctx.drawImage(SPR.frameCanvas(h, fr), Math.round(x), Math.round(y + popY), hw, hh);
+      if (S && i === 0) S.hatsOn = 0;
+      if (S && S.wxType === 'snow' && S.wxA > 0.3) { S.hatsOn++; const sc = hw / SPR.W; ctx.drawImage(SPR.hatCanvas(h, fr), Math.round(x), Math.round(y + popY + SPR.HAT_OY * sc), hw, 16 * sc); } // v8: winter hats while it snows
+      ctx.imageSmoothingEnabled = true;
       ctx.fillStyle = '#9aa3b7'; ctx.font = '600 11px -apple-system,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText(h.short, x + hw / 2, y + hh + 13);
       if (st.bubble) bubble(st.bubble.text, x + hw / 2, y - 4, i === 0 ? 'left' : 'right', Math.min(1, st.bubble.t * 4));
     });
@@ -516,6 +653,14 @@
     const hgt = S ? Math.min(1, S.cam / 3000) : 0;
     const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, shade('#141a2c', -hgt * 0.5)); g.addColorStop(1, '#0d0f16'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     if (!S) return;
+    const wxA = S.wxA, wxT = S.wxType;
+    if (wxT && wxA > 0.01) { // v8 weather sky tint
+      const tg = ctx.createLinearGradient(0, 0, 0, H * 0.8);
+      if (wxT === 'heat') { tg.addColorStop(0, `rgba(255,120,40,${0.30 * wxA})`); tg.addColorStop(1, 'rgba(255,120,40,0)'); }
+      else { tg.addColorStop(0, `rgba(150,200,255,${(wxT === 'snow' ? 0.22 : 0.18) * wxA})`); tg.addColorStop(1, 'rgba(150,200,255,0)'); }
+      ctx.fillStyle = tg; ctx.fillRect(0, 0, W, H);
+      if (wxT === 'heat') { const sx = W * 0.84, syy = Math.round(H * 0.47); ctx.globalAlpha = 0.5 * wxA; ctx.fillStyle = '#ffb347'; ctx.beginPath(); ctx.arc(sx, syy, 26, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 0.18 * wxA; ctx.beginPath(); ctx.arc(sx, syy, 44 + Math.sin(S.t * 2) * 4, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
+    }
     ctx.save();
     if (S.shake) ctx.translate((Math.random() - 0.5) * S.shake, (Math.random() - 0.5) * S.shake);
     ctx.translate(sceneX(), 0); // centre the scene; everything below shares this x offset and the sy() camera
@@ -525,8 +670,15 @@
       if (b.base) { drawPallet(b); continue; }
       const yb = sy(b.y); if (yb < -60 || yb - b.t > H + 40) continue;
       const land = b.landT != null && b.landT < 1 ? (1 - b.landT) * 3 : 0;
-      drawBoard(b.x, yb + land * 0, b.w, b.t, b.look, b.p);
+      const fromTop = S.stack.length - 1 - S.stack.indexOf(b);
+      if (wxT === 'heat' && wxA > 0.05 && fromTop < 3) drawBoardSag(b.x, yb, b.w, b.t, b.look, b.p, {}, (3.2 - fromTop * 0.9) * wxA); // top boards go soft in the heat
+      else drawBoard(b.x, yb + land * 0, b.w, b.t, b.look, b.p);
       if (b.adhered) drawTabs(b, yb);
+      if ((wxT === 'cold' || wxT === 'snow') && wxA > 0.05) { // frost on every board; a snow cap builds on the top one
+        topFace(b.x, yb - b.t, b.w, `rgba(220,240,255,${0.28 * wxA})`);
+        ctx.fillStyle = `rgba(235,247,255,${0.5 * wxA})`; for (let i = 3; i < b.w - 2; i += 9) ctx.fillRect(b.x + i, yb - b.t + 1 + ((i * 7) % 3), 2, 1);
+        if (wxT === 'snow' && fromTop === 0) { const yt = yb - b.t; ctx.fillStyle = `rgba(250,252,255,${0.95 * wxA})`; ctx.beginPath(); ctx.moveTo(b.x - 1, yt + 1); for (let i = 0; i <= 8; i++) ctx.lineTo(b.x + i * b.w / 8, yt - 2 - ((i * 5) % 3)); ctx.lineTo(b.x + b.w + T.DEPTH_X, yt - T.DEPTH_Y - 1); ctx.lineTo(b.x + T.DEPTH_X, yt - T.DEPTH_Y - 2); ctx.closePath(); ctx.fill(); }
+      }
     }
     for (const f of S.falling) {
       const yb = sy(f.y); ctx.save(); ctx.translate(f.x + f.w / 2, yb - f.t / 2); ctx.rotate(f.rot); ctx.globalAlpha = 0.95;
@@ -534,22 +686,61 @@
     }
     if (S.moving) {
       const m = S.moving;
-      if (m.extrude) { ctx.save(); ctx.beginPath(); ctx.rect(T.DIE_X, -10, W + sceneW(), H + 20); ctx.clip(); drawBoard(m.x, sy(m.y), m.w, m.t, m.look, m.p, { bonus: m.bonus }); ctx.restore(); }
-      else drawBoard(m.x, sy(m.y), m.w, m.t, m.look, m.p, { bonus: m.bonus });
+      const sag = wxT === 'heat' ? 6 * wxA : 0;
+      if (m.extrude) { ctx.save(); ctx.beginPath(); ctx.rect(T.DIE_X, -10, W + sceneW(), H + 20); ctx.clip(); drawBoardSag(m.x, sy(m.y), m.w, m.t, m.look, m.p, { bonus: m.bonus }, sag); ctx.restore(); }
+      else drawBoardSag(m.x, sy(m.y), m.w, m.t, m.look, m.p, { bonus: m.bonus }, sag);
+      if (m.bom) { // v8: width call-out over a resized BOM board, vs. a dashed ghost of the board below
+        const tp = top(), yb = sy(m.y), yT = yb - m.t - T.DEPTH_Y - 6, big = m.bom > 1;
+        ctx.save(); ctx.setLineDash([4, 3]); ctx.strokeStyle = '#ffd75e99'; ctx.lineWidth = 1; ctx.strokeRect(tp.x + 0.5, sy(tp.y + tp.t) - T.DEPTH_Y + 0.5, tp.w + T.DEPTH_X - 1, T.DEPTH_Y - 1); ctx.restore();
+        ctx.strokeStyle = big ? '#ff9d6e' : '#7cf0a5'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(m.x, yT); ctx.lineTo(m.x + m.w, yT); ctx.moveTo(m.x, yT - 4); ctx.lineTo(m.x, yT + 4); ctx.moveTo(m.x + m.w, yT - 4); ctx.lineTo(m.x + m.w, yT + 4); ctx.stroke();
+        const lbl = (big ? '▲ ' : '▼ ') + Math.round(m.bom * 100) + '%'; ctx.font = '800 11px -apple-system,system-ui,sans-serif'; const lw = ctx.measureText(lbl).width + 10;
+        ctx.fillStyle = '#0d0f16dd'; roundRect(m.x + m.w / 2 - lw / 2, yT - 9, lw, 16, 6); ctx.fill(); ctx.fillStyle = big ? '#ff9d6e' : '#7cf0a5'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(lbl, m.x + m.w / 2, yT); ctx.textBaseline = 'alphabetic';
+      }
     }
     drawLine(true);
     for (const fl of S.flashes) {
       const b = fl.b, yb = sy(b.y), a = Math.max(0, fl.t / 0.35);
+      if (fl.kind === 'bom') { const ly = sy(top().y + top().t), r0 = (1 - fl.t / 0.6) * 46; ctx.strokeStyle = '#7cf0a5'; ctx.globalAlpha = Math.max(0, fl.t / 0.6); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(T.DIE_X - 6, ly - 10, 8 + r0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; continue; }
       if (fl.kind === 'cut') { ctx.fillStyle = '#fff3b0'; ctx.globalAlpha = Math.max(0, fl.t / 0.12); const ly = sy(top().y + top().t); ctx.beginPath(); ctx.arc(T.DIE_X + 2, ly - (S.moving ? S.moving.t : 9) / 2, 10, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; continue; }
       if (fl.kind === 'slice') { ctx.fillStyle = fl.col; ctx.globalAlpha = a; ctx.fillRect(fl.x - 1.5, yb - b.t - T.DEPTH_Y - 6, 3, b.t + T.DEPTH_Y + 12); ctx.globalAlpha = 1; }
       if (fl.kind === 'ring' || fl.kind === 'grow') { ctx.strokeStyle = fl.kind === 'ring' ? '#f5c542' : '#7cf0a5'; ctx.globalAlpha = a; ctx.lineWidth = 2; const e = (1 - a) * 14; ctx.strokeRect(b.x - e, yb - b.t - T.DEPTH_Y - e, b.w + T.DEPTH_X + e * 2, b.t + T.DEPTH_Y + e * 2); ctx.globalAlpha = 1; }
     }
-    for (const p of S.parts) { ctx.globalAlpha = Math.max(0, 1 - p.t / p.life); ctx.fillStyle = p.col; ctx.fillRect(p.x - 2, sy(p.y) - 2, 4, 4); }
+    for (const p of S.parts) { ctx.globalAlpha = Math.max(0, 1 - p.t / p.life); ctx.fillStyle = p.col; const z = p.sz || 4;
+      if (p.conf) { const cw = 1 + Math.abs(Math.cos(p.rot)) * 5; ctx.fillRect(p.x - cw / 2, sy(p.y) - 2, cw, 4); } else ctx.fillRect(p.x - z / 2, sy(p.y) - z / 2, z, z); }
+    ctx.globalAlpha = 1;
+    for (const u of S.popups) { const k = u.t / u.life, py = sy(u.wy) - k * 34; ctx.globalAlpha = Math.max(0, 1 - k * k); ctx.font = `900 ${Math.round(15 + (1 - k) * 3)}px -apple-system,system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#0d0f16cc'; ctx.strokeText(u.text, u.x, py); ctx.fillStyle = u.col; ctx.fillText(u.text, u.x, py); }
     ctx.globalAlpha = 1;
     if (S.rainDrops.length) { ctx.strokeStyle = '#8fb8ff66'; ctx.lineWidth = 1.2; ctx.beginPath(); for (const d of S.rainDrops) { ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + 4, d.y - 14); } ctx.stroke(); }
-    if (S.combo >= 2 && S.mode === 'play') { ctx.fillStyle = '#f5c542'; ctx.font = '800 15px -apple-system,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Perfect ×' + S.combo, sceneW() / 2, (S.moving ? sy(S.moving.y) - S.moving.t - T.DEPTH_Y - 18 : H * 0.35)); }
+    if (S.combo >= 2 && S.mode === 'play') { ctx.fillStyle = '#f5c542'; ctx.font = `800 ${15 + Math.round(Math.max(0, (S.flashA || 0)) * 20)}px -apple-system,system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.fillText('Perfect ×' + S.combo, sceneW() / 2, (S.moving ? sy(S.moving.y) - S.moving.t - T.DEPTH_Y - 18 : H * 0.35)); }
     drawHosts(); drawPoofs();
+    drawWeatherFront(wxT, wxA);
     ctx.restore();
+    if (S.flashA > 0) { ctx.fillStyle = `rgba(255,248,220,${S.flashA})`; ctx.fillRect(0, 0, W, H); }
+    if (wxT && wxA > 0.01) drawWeatherScreen(wxT, wxA);
+    if (S.promo) drawPromo(S.promo);
+  }
+  function drawWeatherFront(ty, a) { // scene space: snowflakes, heat shimmer
+    if (S.flakes.length) { ctx.fillStyle = '#ffffff'; for (const f of S.flakes) { ctx.globalAlpha = 0.85 * Math.max(a, 0.3); ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.fill(); } ctx.globalAlpha = 1; }
+    if (ty === 'heat' && a > 0.05) { // rising heat shimmer over the stack
+      const tp = top(), y0 = sy(tp.y + tp.t) + 20; ctx.strokeStyle = `rgba(255,232,205,${0.2 * a})`; ctx.lineWidth = 1.5;
+      for (let j = 0; j < 7; j++) { const bx = tp.x - 20 + j * (tp.w + 40) / 6; ctx.beginPath(); for (let k = 0; k <= 14; k++) { const yy = y0 - k * 9 - ((S.t * 40 + j * 13) % 9), xx = bx + Math.sin(S.t * 5 + k * 0.7 + j) * 3; if (k) ctx.lineTo(xx, yy); else ctx.moveTo(xx, yy); } ctx.stroke(); }
+    }
+  }
+  function drawWeatherScreen(ty, a) { // screen space: heat haze / frosted corners
+    if (ty === 'heat') { const g = ctx.createLinearGradient(0, H, 0, H * 0.55); g.addColorStop(0, `rgba(255,140,60,${0.14 * a})`); g.addColorStop(1, 'rgba(255,140,60,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); return; }
+    const R = Math.max(W, H) * 0.75, g = ctx.createRadialGradient(W / 2, H / 2, R * 0.55, W / 2, H / 2, R); g.addColorStop(0, 'rgba(200,230,255,0)'); g.addColorStop(1, `rgba(200,230,255,${(ty === 'cold' ? 0.42 : 0.3) * a})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = `rgba(235,247,255,${0.45 * a})`; ctx.lineWidth = 1.2; ctx.beginPath(); // ice crystals in the corners
+    for (const [cx, cy] of [[8, 8], [W - 8, 8], [8, H - 8], [W - 8, H - 8]]) for (let i = 0; i < 3; i++) { const r = 10 + i * 9, ox = cx + (cx < W / 2 ? r : -r), oy = cy + (cy < H / 2 ? r * 0.6 : -r * 0.6); for (let k = 0; k < 3; k++) { const an = k * Math.PI / 3; ctx.moveTo(ox - Math.cos(an) * 5, oy - Math.sin(an) * 5); ctx.lineTo(ox + Math.cos(an) * 5, oy + Math.sin(an) * 5); } }
+    ctx.stroke();
+  }
+  function drawPromo(p) { // rank-up banner
+    const k = p.t / p.life, inK = Math.min(1, p.t / 0.25), outA = k > 0.8 ? (1 - k) / 0.2 : 1, y = Math.round(H * 0.42), sc = 0.7 + 0.3 * (1 - Math.pow(1 - inK, 3));
+    ctx.save(); ctx.globalAlpha = outA; ctx.translate(W / 2, y); ctx.scale(sc, sc);
+    ctx.font = '900 20px -apple-system,system-ui,sans-serif'; const txt = p.icon + '  ' + p.text, tw = Math.min(ctx.measureText(txt).width, W * 0.8) + 36;
+    ctx.fillStyle = '#0d0f16e6'; roundRect(-tw / 2, -26, tw, 52, 16); ctx.fill(); ctx.strokeStyle = '#f5c542'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#9aa3b7'; ctx.font = '800 10px -apple-system,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText('RANK UP', 0, -10);
+    ctx.fillStyle = '#ffd75e'; ctx.font = '900 20px -apple-system,system-ui,sans-serif'; ctx.fillText(txt, 0, 14, W * 0.8); ctx.restore();
   }
 
   // ---------- loop ----------
@@ -647,6 +838,13 @@
     $('finalScore').textContent = S.score;
     $('finalMeta').textContent = `Height ${S.height} boards · ${S.perfects} perfect${S.perfects === 1 ? '' : 's'} · best ${Math.max(b, S.score)}`;
     $('newBest').hidden = !nb;
+    { // v8 rank: the highest rank reached this run (score AND trim quality); best rank kept on this device
+      const ri = Math.max(S.rank, rankFor(S.score, trimPct())), k = RANKS[ri], bestR = Math.max(ri, store.get(LS.rank, 0)), newR = ri > store.get(LS.rank, 0); store.set(LS.rank, bestR);
+      $('rankIcon').textContent = k.icon; $('rankName').textContent = k.name; $('rankBox').dataset.rank = ri;
+      const nx = RANKS[ri + 1];
+      $('rankLbl').textContent = 'Rank' + (newR && ri > 0 ? ' · new best!' : ` · best: ${RANKS[bestR].name}`);
+      $('rankMeta').textContent = `Trim quality ${trimPct()}%` + (nx ? ` · Next: ${nx.name} at ${nx.score} pts + ${nx.trim}%` : ' · Top rank!');
+    }
     $('unlockNote').textContent = S.unlockedNow.length ? `New cards: ${S.unlockedNow.map(id => productById[id].name).join(', ')}` : `Collection: ${BOARDS.filter(p => collection.has(p.id)).length}/${BOARDS.length} boards`;
     host(0, 'cheer', 'Great stack!'); host(1, 'cheer', 'Go again?');
     drawHostsInto($('overHosts'), 'cheer'); show('over'); $('best').textContent = 'Best ' + Math.max(b, S.score);
@@ -753,7 +951,7 @@
   }
   // test hooks
   window.__fbs = {
-    computeDrop, T, geo, audio: AU, startBill, endBill, boost, updateBill, boards: BOARDS, toggleAdhere, earnAdhere: () => earnAdhere(), rescue, get S() { return S; }, start, drop, pause, resume, products: PRODUCTS,
+    computeDrop, computeDropBom, RANKS, rankFor, trimPct, startWeather, endWeather, startBom, endBom, promote: i => promote(i), wxSpeed: () => wxSpeed(), T, geo, audio: AU, startBill, endBill, boost, updateBill, boards: BOARDS, toggleAdhere, earnAdhere: () => earnAdhere(), rescue, get S() { return S; }, start, drop, pause, resume, products: PRODUCTS,
     setMovingX(x) { if (S && S.moving) S.moving.x = x; }, setProduct(id, gl) { if (S && S.moving) { const p = productById[id]; S.moving.p = p; S.moving.look = lookFor(p); const g = (gl && p.gauges.find(x => x.label === gl)) || p.gauges[0]; S.moving.gauge = g; S.moving.t = thickFor(g); S.lineName = p.name + ' · ' + g.label; S.moving.speed = speedFor(p); } },
     spot: { next: spotAdvance, render: spotRender, durationFor, get id() { return curP().id; }, get fact() { return curF() && curF().id; }, get shownAt() { return spot.shownAt; }, history: spot.history, bags: () => ({ p: pBag.st, f: fBag.st }) }, facts: FACTS, layoutBottom,
     finishExtrusion() { return new Promise(r => { const c = () => (!S || !S.moving || !S.moving.extrude) ? r() : requestAnimationFrame(c); c(); }); },

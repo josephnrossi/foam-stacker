@@ -86,6 +86,16 @@
         osc(t + 0.47, { type: 'square', f: 600, to: 420, dur: 0.3, vol: 0.02, lp: 1500 });
       },
       billLeave(t) { osc(t, { type: 'square', f: 880, to: 90, dur: 0.6, vol: 0.07, lp: 2200 }); osc(t, { type: 'sawtooth', f: 440, to: 55, dur: 0.6, vol: 0.05, lp: 900 }); noise(t + 0.05, { dur: 0.3, vol: 0.06, type: 'bandpass', f: 900, to: 200 }); },
+      // ---- v8
+      bom(t) { // Evan's "New BOM ready": two printer chirps + a bright two-note ding
+        for (let k = 0; k < 5; k++) noise(t + k * 0.035, { dur: 0.02, vol: 0.08, type: 'bandpass', f: 2600 + k * 200, q: 4 });
+        osc(t + 0.2, { type: 'square', f: N(79), dur: 0.09, vol: 0.06, lp: 4000 }); osc(t + 0.3, { type: 'triangle', f: N(84), dur: 0.3, vol: 0.12 });
+      },
+      rankUp(t) { [60, 64, 67, 72, 76].forEach((n, i) => osc(t + i * 0.07, { type: 'square', f: N(n + 7), dur: 0.1, vol: 0.05, lp: 4200 })); [67, 72, 76, 79].forEach(n => osc(t + 0.36, { type: 'triangle', f: N(n), dur: 0.6, vol: 0.07, hold: 0.15 })); },
+      chip(t) { noise(t, { dur: 0.05, vol: 0.2, type: 'highpass', f: 5000 }); osc(t, { type: 'triangle', f: 2400, to: 1200, dur: 0.05, vol: 0.06 }); noise(t + 0.05, { dur: 0.03, vol: 0.1, type: 'highpass', f: 6500 }); },
+      heat(t) { noise(t, { dur: 0.7, vol: 0.08, type: 'bandpass', f: 600, to: 3500, q: 1.2, a: 0.1 }); osc(t, { type: 'sine', f: 180, to: 320, dur: 0.6, vol: 0.06 }); },
+      cold(t) { noise(t, { dur: 0.9, vol: 0.09, type: 'bandpass', f: 1800, to: 500, q: 2.5, a: 0.15 }); osc(t + 0.1, { type: 'triangle', f: N(88), dur: 0.25, vol: 0.04 }); osc(t + 0.25, { type: 'triangle', f: N(91), dur: 0.3, vol: 0.035 }); },
+      snow(t) { [84, 88, 91, 96].forEach((n, i) => osc(t + i * 0.09, { type: 'sine', f: N(n), dur: 0.35, vol: 0.05 })); noise(t, { dur: 0.8, vol: 0.05, type: 'bandpass', f: 1500, to: 700, q: 2, a: 0.2 }); },
       over(t) { [67, 64, 60, 55].forEach((n, i) => osc(t + i * 0.16, { type: 'triangle', f: N(n), dur: i === 3 ? 0.6 : 0.16, vol: 0.16 })); osc(t + 0.48, { type: 'sine', f: N(43), dur: 0.6, vol: 0.12 }); },
       newBest(t) {
         [60, 64, 67, 72].forEach((n, i) => osc(t + i * 0.1, { type: 'square', f: N(n), dur: 0.1, vol: 0.06, lp: 3800 }));
@@ -93,7 +103,7 @@
         osc(t + 0.42, { type: 'sine', f: N(48), dur: 0.8, vol: 0.15, hold: 0.3 });
       },
     };
-    const DUCK = new Set(['perfect', 'widwaw', 'billLeave', 'over', 'newBest', 'adhereEarn', 'slice', 'cut', 'bonus']);
+    const DUCK = new Set(['perfect', 'widwaw', 'billLeave', 'over', 'newBest', 'adhereEarn', 'slice', 'cut', 'bonus', 'bom', 'rankUp']);
     function play(name, t, ...args) { if (!S[name]) return; S[name](t, ...args); if (DUCK.has(name)) duck(t); }
 
     // ---- rain loop (ambience)

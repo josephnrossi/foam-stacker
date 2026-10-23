@@ -1,6 +1,7 @@
-/* Company history facts, paraphrased closely from gilmanbrothers.com (Our History page). Each has its source URL. */
+/* Company history facts, paraphrased closely from gilmanbrothers.com ONLY (Our History, News and Gallery pages). Each has its source URL.
+   v8 additions (1963 to 2021, incl. the COVID-19 era) are listed with quotes in notes/milestones-v8.md. */
 (function () {
-  const H = 'https://gilmanbrothers.com/our-history/';
+  const H = 'https://gilmanbrothers.com/our-history/', N = 'https://gilmanbrothers.com/news/', G = 'https://gilmanbrothers.com/portfolio/';
   window.FBS_FACTS = [
     { id: 'f1897', text: 'In 1897, Nathan Gilman started out in the bedding business in New York City.', source: H },
     { id: 'f1905', text: 'In 1905, Nathan bought the Bozrahville Manufacturing Co. in Connecticut.', source: H },
@@ -19,6 +20,18 @@
     { id: 'fryno', text: 'In the 1980s, Evan and Cyrus Gilman developed the original Ryno Board®.', source: H },
     { id: 'f1997', text: 'A new centennial logo marked the company’s 100th anniversary in 1997.', source: H },
     { id: 'fstars', text: 'The logo’s four stars: three for family generations, one for the employees.', source: H },
+    // ---- v8: more milestones, up through the COVID-19 era (gilmanbrothers.com only) ----
+    { id: 'f1963', text: 'Growing plastic sheet sales led to an addition to the mill in 1963.', source: H },
+    { id: 'f1970s', text: 'In the early 1970s, Gilman built a 60,000 sq ft, $1.5 million plant addition.', source: H },
+    { id: 'f1994', text: 'In 1994, Gilman introduced Duraplast II® and the bendable fasäd® board.', source: H },
+    { id: 'f1995', text: 'In 1995, the Gilman family gave up ownership of Bozrah Light & Power.', source: H },
+    { id: 'fcovidbeds', text: 'In the COVID-19 crisis, INFINITY® boards became field-hospital beds and panels.', source: G },
+    { id: 'fcovidschool', text: 'Later in the pandemic: desk shields for schools and sanitization stations.', source: G },
+    { id: 'f2020video', text: 'From March to November 2020, the sales team held over 300 video conferences.', source: N },
+    { id: 'f2020vcec', text: 'In 2020, a Virtual Customer Experience Center opened at the Gilman, CT HQ.', source: N },
+    { id: 'f2020vts', text: 'Nov 2020: with the Army Corps of Engineers, a vaccine box held −75°C for 72+ hours.', source: N },
+    { id: 'f2021vax', text: 'Jan 2021: Gilman introduced a portable vaccine station that ships flat.', source: N },
+    { id: 'f2021tour', text: 'Spring 2021: a 13-stop, 12,000-mile “Un-Plugged” road tour with Zünd.', source: N },
     { id: 'ftoday', text: 'Today the company is headed by Nathan’s grandson, Evan Gilman.', source: H },
     { id: 'ffamily', text: 'Eight members of the Gilman family are active in the company today.', source: H },
   ];

@@ -138,5 +138,27 @@
     detail(x, frame);
     return (cache[key] = cv);
   }
-  window.FBS_SPRITES = { frameCanvas, W, H, FRAMES: { idle: [0, 1], cheer: [2, 3] } };
+
+  // v8: winter knit hats, worn while it snows. Pixel rows are in sprite space (y can go above the head, so the canvas
+  // covers sprite rows -6..9; draw it at sprite y = HAT_OY). Bobs with the same frame offset as the head.
+  const HAT_OY = -6;
+  const HATS = {
+    evan: { knit: '#d23a3a', knit2: '#a82a2a', cuff: '#f2f2f2', cuff2: '#c9ccd3', pom: '#ffffff', x0: 9, x1: 23 },   // red beanie, white cuff
+    cyrus: { knit: '#2f8f6a', knit2: '#226b50', cuff: '#f5c542', cuff2: '#c9a13a', pom: '#f5c542', x0: 10, x1: 22 }, // green beanie, gold cuff
+    bill: { knit: '#2f6fd6', knit2: '#2353a3', cuff: '#f2f2f2', cuff2: '#c9ccd3', pom: '#ffffff', x0: 9, x1: 23 },
+  };
+  const hatCache = {};
+  function hatCanvas(host, frame) {
+    const key = host.id + frame; if (hatCache[key]) return hatCache[key];
+    const c = HATS[host.id] || HATS.evan, up = frame === 1 ? 1 : 0, j = frame === 3 ? -2 : frame === 2 ? -1 : 0, b = up + j - HAT_OY;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = 16; const x = cv.getContext('2d');
+    const L = [[15, -5 + b, 3, 3, c.pom], [12, -3 + b, c.x1 - c.x0 - 5, 1, c.knit], [c.x0 + 1, -2 + b, c.x1 - c.x0 - 1, 1, c.knit], [c.x0, -1 + b, c.x1 - c.x0 + 1, 5, c.knit], [c.x0 - 1, 4 + b, c.x1 - c.x0 + 3, 3, c.cuff]];
+    x.fillStyle = OUT; for (const [a, y, w, h] of L) x.fillRect(a - 1, y - 1, w + 2, h + 2);
+    for (const [a, y, w, h, col] of L) { x.fillStyle = col; x.fillRect(a, y, w, h); }
+    x.fillStyle = c.knit2; for (let i = c.x0 + 1; i < c.x1; i += 2) x.fillRect(i, b, 1, 4);          // knit ribs
+    x.fillStyle = c.cuff2; for (let i = c.x0; i <= c.x1 + 1; i += 2) x.fillRect(i, 5 + b, 1, 2);     // cuff ribs
+    x.fillStyle = '#ffffff55'; x.fillRect(15, -5 + b, 1, 1); x.fillRect(c.x0 + 2, b, 2, 1);           // highlights
+    return (hatCache[key] = cv);
+  }
+  window.FBS_SPRITES = { frameCanvas, hatCanvas, HAT_OY, W, H, FRAMES: { idle: [0, 1], cheer: [2, 3] } };
 })();
